@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: mekoko
+    env: go
+    buildCommand: go build -o main ./cmd/api
+    startCommand: ./main
