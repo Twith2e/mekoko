@@ -8,6 +8,8 @@ import (
 	"mekoko/internal/database"
 	"mekoko/internal/middleware"
 	"mekoko/internal/modules/auth"
+	tokenGenerator "mekoko/internal/providers/tokens"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,10 +24,23 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 	r.Use(middleware.RequestContextLogger())
 	r.Use(gin.Recovery())
 
+	r.HEAD("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	api := r.Group("/api")
+	apiV1 := api.Group("/v1")
+
+	generator := tokenGenerator.NewJWT(cfg.AccessSecret, cfg.RefreshSecret)
+
 	authRepository := auth.NewRepository(db)
-	authService := auth.NewService(authRepository)
+	authService := auth.NewService(authRepository, db, generator)
 	authHandler := auth.NewHandler(authService)
-	auth.RegisterRoutes(r, authHandler)
+	auth.RegisterRoutes(apiV1, authHandler)
 
 	return r, nil
 }

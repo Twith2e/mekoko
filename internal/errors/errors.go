@@ -1,0 +1,14 @@
+package errors
+
+import "errors"
+
+var (
+	ErrInvalidRequestBody    = errors.New("Invalid request body")
+	ErrInvalidPasswordLength = errors.New("Password must be at least 8 characters long")
+	ErrInvalidPassword       = errors.New("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+	ErrPasswordMismatch      = errors.New("Password and confirm password do not match")
+	ErrRegisteringUser       = errors.New("Failed to register user")
+	ErrFindingUser           = errors.New("User not found")
+	ErrInvalidCredentials    = errors.New("Invalid credentials")
+	ErrUserExists            = errors.New("Email is taken")
+)

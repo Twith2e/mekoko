@@ -6,14 +6,18 @@ import (
 )
 
 type Config struct {
-	DBUrl string
-	Port  string
+	DBUrl         string
+	Port          string
+	AccessSecret  string
+	RefreshSecret string
 }
 
 func Load() Config {
 	return Config{
-		DBUrl: getEnv("DB_URL", ""),
-		Port:  getEnv("PORT", "8080"),
+		DBUrl:         getEnv("DB_URL", ""),
+		Port:          getEnv("PORT", "8080"),
+		AccessSecret:  getEnv("ACCESS_SECRET", ""),
+		RefreshSecret: getEnv("REFRESH_SECRET", ""),
 	}
 }
 
