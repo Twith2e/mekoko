@@ -11,4 +11,6 @@ var (
 	ErrFindingUser           = errors.New("User not found")
 	ErrInvalidCredentials    = errors.New("Invalid credentials")
 	ErrUserExists            = errors.New("Email is taken")
+	ErrUnauthorized          = errors.New("Unauthorized")
+	ErrInvalidSession        = errors.New("Invalid or expired session")
 )

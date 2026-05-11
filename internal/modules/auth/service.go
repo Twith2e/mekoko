@@ -83,7 +83,7 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 		return nil, err
 	}
 
-	if err := txRepo.StoreRefreshToken(ctx, user.ID, hashedRefreshToken, jti, expiresAt); err != nil {
+	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -126,7 +126,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 		return nil, err
 	}
 
-	if err := s.repo.StoreRefreshToken(ctx, user.ID, hashedRefreshToken, jti, expiresAt); err != nil {
+	if err := s.repo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -135,4 +135,8 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 		RefreshToken: refreshToken,
 	}
 	return &tokens, nil
+}
+
+func (s *Service) Logout(ctx context.Context, sid string) error {
+	return s.repo.RevokeRefreshToken(ctx, sid)
 }

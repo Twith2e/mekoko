@@ -84,6 +84,24 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrUnauthorized:
+		return ErrorMapping{
+			Status: http.StatusUnauthorized,
+			Error: APIError{
+				Code:    "UNAUTHORIZED",
+				Message: appErr.ErrUnauthorized.Error(),
+			},
+		}
+
+	case appErr.ErrInvalidSession:
+		return ErrorMapping{
+			Status: http.StatusUnauthorized,
+			Error: APIError{
+				Code:    "INVALID_SESSION",
+				Message: appErr.ErrInvalidSession.Error(),
+			},
+		}
+
 	default:
 		return ErrorMapping{
 			Status: http.StatusInternalServerError,

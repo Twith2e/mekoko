@@ -2,8 +2,10 @@ package auth
 
 import (
 	appErr "mekoko/internal/errors"
+	"mekoko/internal/middleware"
 	"mekoko/internal/response"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -77,5 +79,32 @@ func (h *Handler) Login(c *gin.Context) {
 		Status:  "success",
 		Message: "Logged in",
 		Data:    (*LoginResponse)(tokens),
+	})
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+	pid := strings.TrimSpace(c.GetString(middleware.PublicIDContextKey))
+	if pid == "" {
+		mapped := response.MapError(appErr.ErrUnauthorized)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	sid := strings.TrimSpace(c.GetString(middleware.SessionIDContextKey))
+	if sid == "" {
+		mapped := response.MapError(appErr.ErrInvalidSession)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[any]{
+		Status:  "success",
+		Message: "Logged out",
 	})
 }

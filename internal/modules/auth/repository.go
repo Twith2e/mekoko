@@ -71,11 +71,34 @@ func (r *Repository) FindUserByEmail(ctx context.Context, email string) (*domain
 	return &user, nil
 }
 
-func (r *Repository) StoreRefreshToken(ctx context.Context, userID int64, tokenHash, jti string, expiresAt time.Time) error {
+func (r *Repository) StoreRefreshToken(ctx context.Context, userID int64, sid, tokenHash, jti string, expiresAt time.Time) error {
 	query := `
-		INSERT INTO refresh_tokens (user_id, token_hash, jti, expires_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO refresh_tokens (user_id, token_hash, sid, jti, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, jti, expiresAt)
+	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, sid, jti, expiresAt)
+	return err
+}
+
+func (r *Repository) IsSessionActive(ctx context.Context, sid string) bool {
+	query := `
+		SELECT true FROM refresh_tokens
+		WHERE sid = $1 AND revoked_at IS NULL AND expires_at > NOW()
+	`
+	var exists bool
+	err := r.db.QueryRowContext(ctx, query, sid).Scan(&exists)
+
+	return err == nil
+}
+
+func (r *Repository) RevokeRefreshToken(ctx context.Context, sid string) error {
+	query := `
+		UPDATE refresh_tokens
+		SET revoked_at = NOW()
+		WHERE sid = $1
+	`
+
+	_, err := r.db.ExecContext(ctx, query, sid)
+
 	return err
 }
