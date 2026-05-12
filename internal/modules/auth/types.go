@@ -1,6 +1,11 @@
 package auth
 
-import "mekoko/internal/domain"
+import (
+	"mekoko/internal/domain"
+	"time"
+)
+
+const CookieName = "mekoko_refresh_token"
 
 type CreateUserInput struct {
 	PublicID     string
@@ -13,6 +18,7 @@ type CreateUserInput struct {
 type Tokens struct {
 	RefreshToken string
 	AccessToken  string
+	ExpiresAt    time.Time
 }
 
 type UserAndTokens struct {

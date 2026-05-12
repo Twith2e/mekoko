@@ -9,11 +9,10 @@ type RegistrationRequest struct {
 }
 
 type RegistrationResponse struct {
-	ID           string `json:"id"`
-	FirstName    string `json:"first_name"`
-	Email        string `json:"email"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	ID          string `json:"id"`
+	FirstName   string `json:"first_name"`
+	Email       string `json:"email"`
+	AccessToken string `json:"access_token"`
 }
 
 type LoginRequest struct {
@@ -22,10 +21,5 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	RefreshToken string `json:"refresh_token"`
-	AccessToken  string `json:"access_token"`
-}
-
-type LogoutRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
 }

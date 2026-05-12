@@ -10,6 +10,7 @@ type Config struct {
 	Port          string
 	AccessSecret  string
 	RefreshSecret string
+	IsProd        string
 }
 
 func Load() Config {
@@ -18,6 +19,7 @@ func Load() Config {
 		Port:          getEnv("PORT", "8080"),
 		AccessSecret:  getEnv("ACCESS_SECRET", ""),
 		RefreshSecret: getEnv("REFRESH_SECRET", ""),
+		IsProd:        getEnv("IS_PROD", "false"),
 	}
 }
 

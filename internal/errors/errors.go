@@ -13,4 +13,5 @@ var (
 	ErrUserExists            = errors.New("Email is taken")
 	ErrUnauthorized          = errors.New("Unauthorized")
 	ErrInvalidSession        = errors.New("Invalid or expired session")
+	ErrRefreshingAccessToken = errors.New("Failed to refresh access token")
 )

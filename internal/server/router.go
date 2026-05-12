@@ -10,6 +10,7 @@ import (
 	"mekoko/internal/modules/auth"
 	tokenGenerator "mekoko/internal/providers/tokens"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -37,10 +38,12 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	generator := tokenGenerator.NewJWT(cfg.AccessSecret, cfg.RefreshSecret)
 
+	isProd := cfg.IsProd
+
 	authRepository := auth.NewRepository(db)
 	authGuard := middleware.AuthGuard(generator, authRepository)
 	authService := auth.NewService(authRepository, db, generator)
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, stringToBool(isProd))
 	auth.RegisterRoutes(apiV1, authGuard, authHandler)
 
 	return r, nil
@@ -75,4 +78,15 @@ func connectPostgresWithRetries(dsn string, attempts int, baseDelay time.Duratio
 
 	return nil, fmt.Errorf("database connection failed after %d attempts: %w", attempts, lastErr)
 
+}
+
+func stringToBool(isProd string) bool {
+	switch strings.ToLower(isProd) {
+	case "false":
+		return false
+	case "true":
+		return true
+	default:
+		return false
+	}
 }

@@ -94,6 +94,7 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 	tokens := Tokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
 	}
 
 	uat := UserAndTokens{
@@ -119,6 +120,9 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 	sid := uuid.NewString()
 
 	refreshToken, jti, expiresAt, err := s.tokenGenerator.GenerateRefreshToken(user.UUID, sid)
+	if err != nil {
+		return nil, err
+	}
 	hashedRefreshToken := hasher.HashToken(refreshToken)
 
 	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid)
@@ -133,7 +137,70 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 	tokens := Tokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
 	}
+	return &tokens, nil
+}
+
+func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (*Tokens, error) {
+	hashedRefreshToken := strings.TrimSpace(hasher.HashToken(refreshToken))
+	if hashedRefreshToken == "" {
+		return nil, appErr.ErrInvalidSession
+	}
+
+	row, err := s.repo.FindRefreshTokenHash(ctx, hashedRefreshToken)
+	if err != nil {
+		return nil, appErr.ErrInvalidSession
+	}
+
+	user, err := s.repo.FindUserByID(ctx, row.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	sid := uuid.NewString()
+
+	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid)
+	if err != nil {
+		return nil, err
+	}
+
+	newRefreshToken, jti, expiresAt, err := s.tokenGenerator.GenerateRefreshToken(user.UUID, sid)
+	if err != nil {
+		return nil, err
+	}
+	newHashedRefreshedToken := strings.TrimSpace(hasher.HashToken(newRefreshToken))
+	if newHashedRefreshedToken == "" {
+		return nil, appErr.ErrRefreshingAccessToken
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+
+	txRepo := s.repo.WithTx(tx)
+
+	if err := txRepo.RevokeRefreshToken(ctx, row.SID); err != nil {
+		return nil, err
+	}
+
+	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, newHashedRefreshedToken, jti, expiresAt); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	tokens := Tokens{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		ExpiresAt:    expiresAt,
+	}
+
 	return &tokens, nil
 }
 

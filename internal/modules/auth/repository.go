@@ -54,11 +54,33 @@ func (r *Repository) CreateUser(ctx context.Context, input CreateUserInput) (*do
 
 func (r *Repository) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, public_id, email, password_hash FROM users WHERE email = $1
+		SELECT id, public_id, email, password_hash 
+		FROM users 
+		WHERE email = $1
 	`
 	var user domain.User
 	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Could not find user by email: %s\n", err)
+			return nil, appErr.ErrFindingUser
+		}
+		log.Printf("Failed to find user row: %s\n", err)
+		return nil, appErr.ErrFindingUser
+	}
 
+	return &user, nil
+}
+
+func (r *Repository) FindUserByID(ctx context.Context, id int64) (*domain.User, error) {
+	query := `
+		SELECT id, public_id, email, password_hash 
+		FROM users 
+		WHERE id = $1
+	`
+
+	var user domain.User
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Could not find user by email: %s\n", err)
@@ -82,13 +104,29 @@ func (r *Repository) StoreRefreshToken(ctx context.Context, userID int64, sid, t
 
 func (r *Repository) IsSessionActive(ctx context.Context, sid string) bool {
 	query := `
-		SELECT true FROM refresh_tokens
+		SELECT true 
+		FROM refresh_tokens
 		WHERE sid = $1 AND revoked_at IS NULL AND expires_at > NOW()
 	`
 	var exists bool
 	err := r.db.QueryRowContext(ctx, query, sid).Scan(&exists)
 
 	return err == nil
+}
+
+func (r *Repository) FindRefreshTokenHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error) {
+	query := `
+		SELECT user_id, token_hash, sid, expires_at, revoked_at 
+		FROM refresh_tokens
+		WHERE token_hash = $1 AND expires_at > NOW() AND revoked_at IS NULL
+	`
+	var refreshToken domain.RefreshToken
+	if err := r.db.QueryRowContext(ctx, query, tokenHash).
+		Scan(&refreshToken.UserID, &refreshToken.TokenHash, &refreshToken.SID, &refreshToken.ExpiresAt, &refreshToken.RevokedAt); err != nil {
+		return nil, err
+	}
+
+	return &refreshToken, nil
 }
 
 func (r *Repository) RevokeRefreshToken(ctx context.Context, sid string) error {

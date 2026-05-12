@@ -102,6 +102,15 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrRefreshingAccessToken:
+		return ErrorMapping{
+			Status: http.StatusInternalServerError,
+			Error: APIError{
+				Code:    "REFRESH_TOKEN_ERROR",
+				Message: appErr.ErrRefreshingAccessToken.Error(),
+			},
+		}
+
 	default:
 		return ErrorMapping{
 			Status: http.StatusInternalServerError,

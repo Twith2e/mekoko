@@ -6,16 +6,18 @@ import (
 	"mekoko/internal/response"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	service *Service
+	isProd  bool
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, isProd bool) *Handler {
+	return &Handler{service: service, isProd: isProd}
 }
 
 func (h *Handler) Register(c *gin.Context) {
@@ -39,12 +41,13 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	c.SetCookie(CookieName, uat.Tokens.RefreshToken, int(time.Until(uat.Tokens.ExpiresAt).Seconds()), "/api/v1/auth", "", h.isProd, true)
+
 	dto := RegistrationResponse{
-		ID:           uat.User.UUID,
-		FirstName:    uat.User.FirstName,
-		Email:        uat.User.Email,
-		AccessToken:  uat.Tokens.AccessToken,
-		RefreshToken: uat.Tokens.RefreshToken,
+		ID:          uat.User.UUID,
+		FirstName:   uat.User.FirstName,
+		Email:       uat.User.Email,
+		AccessToken: uat.Tokens.AccessToken,
 	}
 
 	c.JSON(http.StatusOK, response.APIResponse[RegistrationResponse]{
@@ -75,10 +78,58 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	c.SetCookie(CookieName, tokens.RefreshToken, int(time.Until(tokens.ExpiresAt).Seconds()), "/api/v1/auth", "", h.isProd, true)
+
 	c.JSON(http.StatusOK, response.APIResponse[LoginResponse]{
 		Status:  "success",
 		Message: "Logged in",
-		Data:    (*LoginResponse)(tokens),
+		Data: &LoginResponse{
+			AccessToken: tokens.AccessToken,
+		},
+	})
+}
+
+func (h *Handler) RefreshAccessToken(c *gin.Context) {
+	cookie, err := (c.Request.Cookie(CookieName))
+	if err != nil {
+		mapped := response.MapError(appErr.ErrInvalidSession)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	rToken := strings.TrimSpace(cookie.Value)
+	if rToken == "" {
+		mapped := response.MapError(appErr.ErrInvalidSession)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	tokens, err := h.service.RefreshAccessToken(c.Request.Context(), rToken)
+	if err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.SetCookie(CookieName, tokens.RefreshToken, int(time.Until(tokens.ExpiresAt).Seconds()), "/api/v1/auth", "", h.isProd, true)
+
+	dto := LoginResponse{
+		AccessToken: tokens.AccessToken,
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[LoginResponse]{
+		Status:  "success",
+		Message: "Access token refreshed successfully",
+		Data:    &dto,
 	})
 }
 
@@ -102,6 +153,17 @@ func (h *Handler) Logout(c *gin.Context) {
 		})
 		return
 	}
+
+	if err := h.service.Logout(c.Request.Context(), sid); err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.SetCookie(CookieName, "", -1, "/api/v1/auth", "", h.isProd, true)
 
 	c.JSON(http.StatusOK, response.APIResponse[any]{
 		Status:  "success",
