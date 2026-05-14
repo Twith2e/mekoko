@@ -8,6 +8,7 @@ import (
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/hasher"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -16,10 +17,13 @@ type Service struct {
 	repo           *Repository
 	db             *sql.DB
 	tokenGenerator TokenGenerator
+	emailSender    EmailSender
+	clientBaseURL  string
+	appName        string
 }
 
-func NewService(repo *Repository, db *sql.DB, tokenGenerator TokenGenerator) *Service {
-	return &Service{repo: repo, db: db, tokenGenerator: tokenGenerator}
+func NewService(repo *Repository, db *sql.DB, tokenGenerator TokenGenerator, emailSender EmailSender, clientBaseURL, appName string) *Service {
+	return &Service{repo: repo, db: db, tokenGenerator: tokenGenerator, emailSender: emailSender, clientBaseURL: clientBaseURL, appName: appName}
 }
 
 func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserAndTokens, error) {
@@ -142,6 +146,157 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 	return &tokens, nil
 }
 
+func (s *Service) ChangePassword(ctx context.Context, publicID string, payload PasswordChangeRequest) error {
+	currentPw := strings.TrimSpace(payload.CurrentPassword)
+	newPw := strings.TrimSpace(payload.NewPassword)
+	confirmNewPw := strings.TrimSpace(payload.ConfirmNewPassword)
+
+	user, err := s.repo.FindUserByPublicID(ctx, publicID)
+	if err != nil {
+		log.Printf("%s", err)
+		return err
+	}
+
+	currentPwHash := user.PasswordHash
+	if err := ComparePassword(currentPwHash, currentPw); err != nil {
+		log.Printf("%s", err)
+		return err
+	}
+
+	if newPw != confirmNewPw {
+		return appErr.ErrPasswordMismatch
+	}
+
+	newPwHash, err := HashPassword(newPw)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	txRepo := s.repo.WithTx(tx)
+
+	if err := txRepo.UpdateUserPasswordHash(ctx, newPwHash, user.ID); err != nil {
+		return err
+	}
+
+	if err := txRepo.RevokeAllSessions(ctx, user.ID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) ForgotPassword(ctx context.Context, payload ForgotPasswordRequest) error {
+	now := time.Now().UTC()
+	email := strings.TrimSpace(payload.Email)
+
+	user, err := s.repo.FindUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, appErr.ErrFindingUser) {
+			return nil
+		}
+		return err
+	}
+
+	count, err := s.repo.GetPasswordResetAttemptCount(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+
+	if count >= 5 {
+		return appErr.ErrTooManyRequests
+	}
+
+	token, err := GenerateToken()
+	if err != nil {
+		return err
+	}
+
+	hashedToken := hasher.HashToken(token)
+	expiresAt := now.Add(5 * time.Minute)
+
+	url := s.clientBaseURL + "/password/reset/" + token
+
+	if err := s.repo.RecordPasswordResetAttempt(ctx, hashedToken, user.ID, expiresAt); err != nil {
+		return err
+	}
+
+	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", url); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) ResetPassword(ctx context.Context, payload ResetPasswordRequest) error {
+	token := strings.TrimSpace(payload.Token)
+	if token == "" {
+		return appErr.ErrInvalidRequestBody
+	}
+
+	hashedToken := hasher.HashToken(token)
+
+	user, err := s.repo.FindUserByTokenHash(ctx, hashedToken)
+	if err != nil {
+		return err
+	}
+
+	newPw := strings.TrimSpace(payload.NewPassword)
+	if newPw == "" {
+		return appErr.ErrInvalidRequestBody
+	}
+
+	confirmNewPw := strings.TrimSpace(payload.ConfirmNewPassword)
+	if confirmNewPw == "" {
+		return appErr.ErrInvalidRequestBody
+	}
+
+	if confirmNewPw != newPw {
+		return appErr.ErrPasswordMismatch
+	}
+
+	hashedPw, err := HashPassword(newPw)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	txRepo := s.repo.WithTx(tx)
+	if err := txRepo.UpdateUserPasswordHash(ctx, hashedPw, user.ID); err != nil {
+		return err
+	}
+
+	if err := txRepo.RevokeAllSessions(ctx, user.ID); err != nil {
+		return err
+	}
+
+	if err := txRepo.MarkTokenUsed(ctx, hashedToken); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (*Tokens, error) {
 	hashedRefreshToken := strings.TrimSpace(hasher.HashToken(refreshToken))
 	if hashedRefreshToken == "" {
@@ -183,7 +338,7 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (
 
 	txRepo := s.repo.WithTx(tx)
 
-	if err := txRepo.RevokeRefreshToken(ctx, row.SID); err != nil {
+	if err := txRepo.RevokeCurrentSession(ctx, row.SID); err != nil {
 		return nil, err
 	}
 
@@ -205,5 +360,5 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (
 }
 
 func (s *Service) Logout(ctx context.Context, sid string) error {
-	return s.repo.RevokeRefreshToken(ctx, sid)
+	return s.repo.RevokeCurrentSession(ctx, sid)
 }

@@ -89,6 +89,94 @@ func (h *Handler) Login(c *gin.Context) {
 	})
 }
 
+func (h *Handler) ChangePassword(c *gin.Context) {
+	pid := strings.TrimSpace(c.GetString(middleware.PublicIDContextKey))
+	if pid == "" {
+		mapped := response.MapError(appErr.ErrUnauthorized)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	var payload PasswordChangeRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		mapped := response.MapError(appErr.ErrInvalidRequestBody)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	if err := h.service.ChangePassword(c.Request.Context(), pid, payload); err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[any]{
+		Status:  "success",
+		Message: "Password change was successful",
+	})
+}
+
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var payload ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		mapped := response.MapError(appErr.ErrInvalidRequestBody)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	if err := h.service.ForgotPassword(c.Request.Context(), payload); err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[any]{
+		Status:  "success",
+		Message: "If that email exists, you'll receive a reset link",
+	})
+}
+
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var payload ResetPasswordRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		mapped := response.MapError(appErr.ErrInvalidRequestBody)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	if err := h.service.ResetPassword(c.Request.Context(), payload); err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[any]{
+		Status:  "success",
+		Message: "Password reset was successful",
+	})
+}
+
 func (h *Handler) RefreshAccessToken(c *gin.Context) {
 	cookie, err := (c.Request.Cookie(CookieName))
 	if err != nil {
@@ -154,7 +242,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Logout(c.Request.Context(), sid); err != nil {
+	if err := h.service.Logout(c.Request.Context(), pid); err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",

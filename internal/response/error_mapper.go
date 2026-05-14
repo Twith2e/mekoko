@@ -111,6 +111,24 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrTooManyRequests:
+		return ErrorMapping{
+			Status: http.StatusTooManyRequests,
+			Error: APIError{
+				Code:    "TOO_MANY_REQUESTS",
+				Message: appErr.ErrTooManyRequests.Error(),
+			},
+		}
+
+	case appErr.ErrPasswordResetUserNotFound:
+		return ErrorMapping{
+			Status: http.StatusNotFound,
+			Error: APIError{
+				Code:    "EMAIL_DOES_NOT_EXIST",
+				Message: appErr.ErrPasswordResetUserNotFound.Error(),
+			},
+		}
+
 	default:
 		return ErrorMapping{
 			Status: http.StatusInternalServerError,

@@ -1,0 +1,2 @@
+ALTER TABLE password_reset_attempts
+DROP attempt_type;

@@ -1,0 +1,2 @@
+ALTER TABLE refresh_tokens
+ADD sid TEXT NOT NULL UNIQUE;

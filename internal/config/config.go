@@ -6,20 +6,26 @@ import (
 )
 
 type Config struct {
-	DBUrl         string
-	Port          string
-	AccessSecret  string
-	RefreshSecret string
-	IsProd        string
+	DBUrl               string
+	Port                string
+	AccessSecret        string
+	RefreshSecret       string
+	IsProd              string
+	ResendApiKey        string
+	MekokoClientBaseURL string
+	AppName             string
 }
 
 func Load() Config {
 	return Config{
-		DBUrl:         getEnv("DB_URL", ""),
-		Port:          getEnv("PORT", "8080"),
-		AccessSecret:  getEnv("ACCESS_SECRET", ""),
-		RefreshSecret: getEnv("REFRESH_SECRET", ""),
-		IsProd:        getEnv("IS_PROD", "false"),
+		DBUrl:               getEnv("DB_URL", ""),
+		Port:                getEnv("PORT", "8080"),
+		AccessSecret:        getEnv("ACCESS_SECRET", ""),
+		RefreshSecret:       getEnv("REFRESH_SECRET", ""),
+		IsProd:              getEnv("IS_PROD", "false"),
+		ResendApiKey:        getEnv("RESEND_API_KEY", ""),
+		MekokoClientBaseURL: getEnv("MEKOKO_CLIENT_BASE_URL", ""),
+		AppName:             getEnv("APP_NAME", "Mekoko"),
 	}
 }
 

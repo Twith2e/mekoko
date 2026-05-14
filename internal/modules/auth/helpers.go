@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	appErr "mekoko/internal/errors"
 
 	"golang.org/x/crypto/bcrypt"
@@ -46,4 +48,12 @@ func ValidatePassword(pw string) error {
 
 func ComparePassword(pwHash, pw string) error {
 	return bcrypt.CompareHashAndPassword([]byte(pwHash), []byte(pw))
+}
+
+func GenerateToken() (string, error) {
+	tokenByte := make([]byte, 32)
+	if _, err := rand.Read(tokenByte); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(tokenByte), nil
 }

@@ -8,6 +8,8 @@ import (
 	"mekoko/internal/database"
 	"mekoko/internal/middleware"
 	"mekoko/internal/modules/auth"
+	"mekoko/internal/modules/cart"
+	"mekoko/internal/providers/email"
 	tokenGenerator "mekoko/internal/providers/tokens"
 	"net/http"
 	"strings"
@@ -40,11 +42,18 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	isProd := cfg.IsProd
 
+	resend := email.NewResend(cfg.ResendApiKey)
+
 	authRepository := auth.NewRepository(db)
 	authGuard := middleware.AuthGuard(generator, authRepository)
-	authService := auth.NewService(authRepository, db, generator)
+	authService := auth.NewService(authRepository, db, generator, resend, cfg.MekokoClientBaseURL, cfg.AppName)
 	authHandler := auth.NewHandler(authService, stringToBool(isProd))
 	auth.RegisterRoutes(apiV1, authGuard, authHandler)
+
+	cartRepository := cart.NewRepository(db)
+	cartService := cart.NewService(cartRepository, db)
+	cartHandler := cart.NewHandler(cartService)
+	cart.RegisterRoutes(apiV1, authGuard, cartHandler)
 
 	return r, nil
 }
