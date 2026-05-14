@@ -50,23 +50,23 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 		return nil, err
 	}
 
-	publicID := uuid.NewString()
+	userPublicID := uuid.NewString()
 	sid := uuid.NewString()
 
 	input := &CreateUserInput{
-		PublicID:     publicID,
+		PublicID:     userPublicID,
 		FirstName:    strings.TrimSpace(req.FirstName),
 		LastName:     strings.TrimSpace(req.LastName),
 		Email:        email,
 		PasswordHash: hashedPassword,
 	}
 
-	refreshToken, jti, expiresAt, err := s.tokenGenerator.GenerateRefreshToken(publicID, sid)
+	refreshToken, jti, expiresAt, err := s.tokenGenerator.GenerateRefreshToken(userPublicID, sid)
 	if err != nil {
 		return nil, err
 	}
 
-	accessToken, err := s.tokenGenerator.GenerateAccessToken(publicID, sid)
+	accessToken, err := s.tokenGenerator.GenerateAccessToken(userPublicID, sid)
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +146,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 	return &tokens, nil
 }
 
-func (s *Service) ChangePassword(ctx context.Context, publicID string, payload PasswordChangeRequest) error {
+func (s *Service) ChangePassword(ctx context.Context, userPublicID string, payload PasswordChangeRequest) error {
 	currentPw := strings.TrimSpace(payload.CurrentPassword)
 	newPw := strings.TrimSpace(payload.NewPassword)
 	confirmNewPw := strings.TrimSpace(payload.ConfirmNewPassword)
 
-	user, err := s.repo.FindUserByPublicID(ctx, publicID)
+	user, err := s.repo.FindUserByPublicID(ctx, userPublicID)
 	if err != nil {
 		log.Printf("%s", err)
 		return err
@@ -231,7 +231,16 @@ func (s *Service) ForgotPassword(ctx context.Context, payload ForgotPasswordRequ
 		return err
 	}
 
-	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", url); err != nil {
+	resetEmailData := ResetEmailData{
+		AppName:       s.appName,
+		ResetURL:      url,
+		Email:         email,
+		Year:          time.Now().Year(),
+		ExpiryMinutes: expiresAt.Minute(),
+		Name:          user.FirstName,
+	}
+
+	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", resetEmailData); err != nil {
 		return err
 	}
 
@@ -248,6 +257,10 @@ func (s *Service) ResetPassword(ctx context.Context, payload ResetPasswordReques
 
 	user, err := s.repo.FindUserByTokenHash(ctx, hashedToken)
 	if err != nil {
+		log.Printf("Error occured while finding user by token hash: %s", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return appErr.ErrInvalidToken
+		}
 		return err
 	}
 
@@ -267,11 +280,13 @@ func (s *Service) ResetPassword(ctx context.Context, payload ResetPasswordReques
 
 	hashedPw, err := HashPassword(newPw)
 	if err != nil {
+		log.Printf("Error occured while hashing password: %s", err)
 		return err
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		log.Printf("Transaction error: %s", err)
 		return err
 	}
 
@@ -279,18 +294,22 @@ func (s *Service) ResetPassword(ctx context.Context, payload ResetPasswordReques
 
 	txRepo := s.repo.WithTx(tx)
 	if err := txRepo.UpdateUserPasswordHash(ctx, hashedPw, user.ID); err != nil {
+		log.Printf("Error occured while updating password: %s", err)
 		return err
 	}
 
 	if err := txRepo.RevokeAllSessions(ctx, user.ID); err != nil {
+		log.Printf("Error occured while revoking all sessions: %s", err)
 		return err
 	}
 
 	if err := txRepo.MarkTokenUsed(ctx, hashedToken); err != nil {
+		log.Printf("Error occured while marking token as used: %s", err)
 		return err
 	}
 
 	if err := tx.Commit(); err != nil {
+		log.Printf("Error occured while commiting: %s", err)
 		return err
 	}
 
@@ -360,5 +379,6 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (
 }
 
 func (s *Service) Logout(ctx context.Context, sid string) error {
+	log.Printf("sid: %s", sid)
 	return s.repo.RevokeCurrentSession(ctx, sid)
 }

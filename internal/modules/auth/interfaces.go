@@ -11,5 +11,5 @@ type TokenGenerator interface {
 }
 
 type EmailSender interface {
-	SendEmail(ctx context.Context, recipient, subject, url string) error
+	SendEmail(ctx context.Context, recipient, subject string, data ResetEmailData) error
 }

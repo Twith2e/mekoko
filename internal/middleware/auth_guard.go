@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"strings"
@@ -40,6 +41,8 @@ func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
 
 		sub := claims.Subject
 		sid := claims.SID
+
+		log.Printf("sid from auth guard: %s", sid)
 
 		if !sessionChecker.IsSessionActive(c.Request.Context(), sid) {
 			mapped := response.MapError(appErr.ErrUnauthorized)

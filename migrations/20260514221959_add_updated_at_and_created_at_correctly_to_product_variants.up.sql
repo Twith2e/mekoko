@@ -1,0 +1,3 @@
+ALTER TABLE product_variants
+ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(),
+ADD COLUMN updated_at TIMESTAMPTZ;

@@ -1,0 +1,1 @@
+DROP INDEX idx_password_reset_attempts_user_id ON password_reset_attempts(user_id)

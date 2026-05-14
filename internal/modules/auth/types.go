@@ -25,3 +25,12 @@ type UserAndTokens struct {
 	User   domain.User
 	Tokens Tokens
 }
+
+type ResetEmailData struct {
+	AppName       string
+	ResetURL      string
+	Name          string
+	ExpiryMinutes int
+	Year          int
+	Email         string
+}

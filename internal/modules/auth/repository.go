@@ -54,12 +54,12 @@ func (r *Repository) CreateUser(ctx context.Context, input CreateUserInput) (*do
 
 func (r *Repository) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, public_id, email, password_hash 
+		SELECT id, public_id, email, password_hash, first_name
 		FROM users 
 		WHERE email = $1
 	`
 	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash, &user.FirstName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Could not find user by email: %s\n", err)

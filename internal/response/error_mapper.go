@@ -129,6 +129,15 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrInvalidToken:
+		return ErrorMapping{
+			Status: http.StatusUnauthorized,
+			Error: APIError{
+				Code:    "INVALID_TOKEN",
+				Message: appErr.ErrInvalidToken.Error(),
+			},
+		}
+
 	default:
 		return ErrorMapping{
 			Status: http.StatusInternalServerError,
