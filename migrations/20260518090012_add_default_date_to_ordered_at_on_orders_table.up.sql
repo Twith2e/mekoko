@@ -1,0 +1,2 @@
+ALTER TABLE orders
+ALTER COLUMN ordered_at SET DEFAULT NOW();

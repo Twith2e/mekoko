@@ -17,4 +17,5 @@ var (
 	ErrTooManyRequests           = errors.New("Too many requests")
 	ErrPasswordResetUserNotFound = errors.New("If that email exists, you'll receuve a reset link")
 	ErrInvalidToken              = errors.New("Invalid or expired tokens")
+	ErrInvalidRequestQuery       = errors.New("Invalid request query")
 )

@@ -3,6 +3,7 @@ package cart
 import (
 	"context"
 	"database/sql"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -27,10 +28,25 @@ func (s *Service) AddToCart(ctx context.Context, userPublicID string, payload Ad
 		return err
 	}
 
-	cartPublicID := uuid.NewString()
+	cartItemPublicID := uuid.NewString()
 
-	if err := s.repo.AddToCart(ctx, cartPublicID, user.ID, productVariant.ID, payload.UnitPriceAtSelection, payload.Quantity); err != nil {
+	if err := s.repo.AddToCart(ctx, cartItemPublicID, user.ID, productVariant.ID, payload.UnitPriceAtSelection, payload.Quantity); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (s *Service) FetchAllCartItems(ctx context.Context, userPublicID string) ([]CartForUI, error) {
+	log.Printf("pid from service: %s", userPublicID)
+	user, err := s.repo.FindUserByPublicID(ctx, userPublicID)
+	if err != nil {
+		return nil, err
+	}
+
+	cartItems, err := s.repo.FetchAllCartItems(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return cartItems, nil
 }

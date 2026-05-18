@@ -11,4 +11,5 @@ type Product struct {
 	BasePrice          int64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Variants           []ProductVariant
 }

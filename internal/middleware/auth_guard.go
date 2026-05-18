@@ -30,6 +30,8 @@ func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
 
 		token := strings.TrimSpace(parts[1])
 		claims, err := signer.ValidateAccessToken(token)
+		log.Printf("token validation: err=%v, claims=%+v", err, claims)
+
 		if token == "" || err != nil {
 			mapped := response.MapError(appErr.ErrUnauthorized)
 			c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
@@ -42,6 +44,7 @@ func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
 		sub := claims.Subject
 		sid := claims.SID
 
+		log.Printf("pid from auth guard: %s", sub)
 		log.Printf("sid from auth guard: %s", sid)
 
 		if !sessionChecker.IsSessionActive(c.Request.Context(), sid) {

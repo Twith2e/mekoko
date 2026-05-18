@@ -138,6 +138,15 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrInvalidRequestQuery:
+		return ErrorMapping{
+			Status: http.StatusBadRequest,
+			Error: APIError{
+				Code:    "INVALID_REQUEST_QUERY",
+				Message: appErr.ErrInvalidRequestQuery.Error(),
+			},
+		}
+
 	default:
 		return ErrorMapping{
 			Status: http.StatusInternalServerError,

@@ -1,11 +1,11 @@
-package cart
+package order
 
 import "github.com/gin-gonic/gin"
 
 func RegisterRoutes(rg *gin.RouterGroup, authGuard gin.HandlerFunc, handler *Handler) {
-	cart := rg.Group("/cart", authGuard)
+	order := rg.Group("/order", authGuard)
+
 	{
-		cart.POST("/add", handler.AddToCart)
-		cart.GET("", handler.FetchAllCartItems)
+		order.POST("/create", handler.CreateOrder)
 	}
 }

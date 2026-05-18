@@ -26,7 +26,7 @@ func WithTx(db *sql.Tx) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) FindUserByPublicID(ctx context.Context, userPublic string) (*domain.User, error) {
+func (r *Repository) FindUserByPublicID(ctx context.Context, userPublicID string) (*domain.User, error) {
 	query := `
 		SELECT id, public_id, email, password_hash 
 		FROM users 
@@ -34,10 +34,10 @@ func (r *Repository) FindUserByPublicID(ctx context.Context, userPublic string) 
 	`
 
 	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, userPublic).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
+	err := r.db.QueryRowContext(ctx, query, userPublicID).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Printf("Could not find user by email: %s\n", err)
+			log.Printf("Could not find user by public id: %s\n", err)
 			return nil, appErr.ErrFindingUser
 		}
 		log.Printf("Failed to find user row: %s\n", err)
@@ -81,13 +81,14 @@ func (r *Repository) AddToCart(ctx context.Context, cartPublic_id string, user_i
 
 func (r *Repository) FetchAllCartItems(ctx context.Context, user_id int64) ([]CartForUI, error) {
 	query := `
-		SELECT cart_items.public_id, product_variants.public_id, cart_items.quantity, cart_items.unit_price_at_selection, product_variants.image_url, product_variants.color
+		SELECT cart_items.public_id, product_variants.public_id, cart_items.quantity, cart_items.unit_price_at_selection, product_variants.image_url, product_variants.color, products.name
 		FROM cart_items
 		JOIN product_variants ON cart_items.variant_id = product_variants.id
+		JOIN products ON product_variants.product_id = products.id
 		WHERE user_id = $1 
 	`
 
-	var carts []CartForUI
+	carts := make([]CartForUI, 0)
 
 	rows, err := r.db.QueryContext(ctx, query, user_id)
 	if err != nil {
@@ -98,7 +99,7 @@ func (r *Repository) FetchAllCartItems(ctx context.Context, user_id int64) ([]Ca
 
 	for rows.Next() {
 		var item CartForUI
-		if err := rows.Scan(&item.ID, &item.VariantID, &item.Quantity, &item.UnitPriceAtSelection, &item.ImageURL, &item.Color); err != nil {
+		if err := rows.Scan(&item.ID, &item.VariantID, &item.Quantity, &item.UnitPriceAtSelection, &item.ImageURL, &item.Color, &item.Name); err != nil {
 			return nil, err
 		}
 		carts = append(carts, item)
