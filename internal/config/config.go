@@ -14,6 +14,7 @@ type Config struct {
 	ResendApiKey        string
 	MekokoClientBaseURL string
 	AppName             string
+	AllowedOrigin       string
 }
 
 func Load() Config {
@@ -26,6 +27,7 @@ func Load() Config {
 		ResendApiKey:        getEnv("RESEND_API_KEY", ""),
 		MekokoClientBaseURL: getEnv("MEKOKO_CLIENT_BASE_URL", ""),
 		AppName:             getEnv("APP_NAME", "Mekoko"),
+		AllowedOrigin:       getEnv("ALLOWED_ORIGIN", "localhost:3000"),
 	}
 }
 

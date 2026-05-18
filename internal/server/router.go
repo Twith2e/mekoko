@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,6 +28,11 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 		return nil, err
 	}
 	r := gin.New()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{cfg.AllowedOrigin},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+	}))
 	r.Use(middleware.RequestContextLogger())
 	r.Use(gin.Recovery())
 
