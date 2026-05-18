@@ -11,6 +11,7 @@ import (
 	"mekoko/internal/modules/cart"
 	"mekoko/internal/modules/order"
 	"mekoko/internal/modules/product"
+	"mekoko/internal/modules/waitlist"
 	"mekoko/internal/providers/email"
 	tokenGenerator "mekoko/internal/providers/tokens"
 	"net/http"
@@ -66,6 +67,11 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 	orderService := order.NewService(orderRepository, db)
 	orderHandler := order.NewHandler(orderService)
 	order.RegisterRoutes(apiV1, authGuard, orderHandler)
+
+	waitlistRepository := waitlist.NewRepository(db)
+	waitlistService := waitlist.NewService(waitlistRepository, resend, cfg.AppName)
+	waitlistHandler := waitlist.NewHandler(waitlistService)
+	waitlist.AddRoute(apiV1, waitlistHandler)
 
 	return r, nil
 }

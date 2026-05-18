@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	_ "embed"
 	"errors"
+	"html/template"
 	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/hasher"
@@ -12,6 +15,9 @@ import (
 
 	"github.com/google/uuid"
 )
+
+//go:embed templates/password_reset.html
+var passwordReset string
 
 type Service struct {
 	repo           *Repository
@@ -240,7 +246,21 @@ func (s *Service) ForgotPassword(ctx context.Context, payload ForgotPasswordRequ
 		Name:          user.FirstName,
 	}
 
-	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", resetEmailData); err != nil {
+	tmpl, err := template.New("reset").Parse(passwordReset)
+	if err != nil {
+		log.Printf("%s", err)
+		return err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, resetEmailData); err != nil {
+		log.Printf("%s", err)
+		return err
+	}
+
+	htmlBody := buf.String()
+
+	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", htmlBody); err != nil {
 		return err
 	}
 
