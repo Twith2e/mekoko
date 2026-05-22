@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
+	"mekoko/internal/domain"
 	"net/http"
 	"time"
 
@@ -18,21 +19,21 @@ func NewResend(apiKey string) *Resend {
 	return &Resend{ApiKey: apiKey, Client: &http.Client{Timeout: time.Second * 15}}
 }
 
-func (r *Resend) SendEmail(ctx context.Context, recipient, subject string, htmlBody string) error {
+func (r *Resend) SendEmail(ctx context.Context, payload *domain.Email) (string, error) {
 	client := resend.NewClient(r.ApiKey)
 	params := &resend.SendEmailRequest{
-		From:    "onboarding@resend.dev",
-		To:      []string{recipient},
-		Html:    htmlBody,
-		Subject: subject,
+		From:    payload.Sender,
+		To:      []string{payload.Recipient},
+		Html:    payload.HtmlContent,
+		Subject: payload.Subject,
 	}
 
 	sent, err := client.Emails.Send(params)
 	if err != nil {
 		fmt.Println(err.Error())
-		return err
+		return "", err
 	}
 
 	fmt.Println(sent.Id)
-	return nil
+	return sent.Id, nil
 }

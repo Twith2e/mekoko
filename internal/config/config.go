@@ -12,9 +12,11 @@ type Config struct {
 	RefreshSecret       string
 	IsProd              string
 	ResendApiKey        string
+	BrevoApiKey         string
 	MekokoClientBaseURL string
 	AppName             string
 	AllowedOrigin       string
+	EmailSender         string
 }
 
 func Load() Config {
@@ -25,9 +27,11 @@ func Load() Config {
 		RefreshSecret:       getEnv("REFRESH_SECRET", ""),
 		IsProd:              getEnv("IS_PROD", "false"),
 		ResendApiKey:        getEnv("RESEND_API_KEY", ""),
+		BrevoApiKey:         getEnv("BREVO_API_KEY", ""),
 		MekokoClientBaseURL: getEnv("MEKOKO_CLIENT_BASE_URL", ""),
 		AppName:             getEnv("APP_NAME", "Mekoko"),
 		AllowedOrigin:       getEnv("ALLOWED_ORIGIN", "localhost:3000"),
+		EmailSender:         getEnv("EMAIL_SENDER", ""),
 	}
 }
 

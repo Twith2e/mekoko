@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"html/template"
 	"log"
+	"mekoko/internal/domain"
 	"strings"
 	"time"
 )
@@ -23,16 +24,18 @@ type Service struct {
 	repo        *Repository
 	emailSender EmailSender
 	appName     string
+	sender      string
 }
 
-func NewService(repo *Repository, emailSender EmailSender, appName string) *Service {
-	return &Service{repo: repo, emailSender: emailSender, appName: appName}
+func NewService(repo *Repository, emailSender EmailSender, appName, sender string) *Service {
+	return &Service{repo: repo, emailSender: emailSender, appName: appName, sender: sender}
 }
 
 func (s *Service) JoinWaitlist(ctx context.Context, email string) error {
 	email = strings.TrimSpace(email)
 
 	if err := s.repo.AddToWaitlist(ctx, email); err != nil {
+		log.Printf("waitlist: failed to add %s to waitlist: %s", email, err)
 		return err
 	}
 
@@ -52,9 +55,26 @@ func (s *Service) JoinWaitlist(ctx context.Context, email string) error {
 		return err
 	}
 
-	if err := s.emailSender.SendEmail(ctx, email, "You're on the list!", buf.String()); err != nil {
+	subject := "You're on the list!"
+
+	payload := domain.Email{
+		Recipient:     email,
+		RecipientName: "",
+		Sender:        s.sender,
+		SenderName:    s.appName,
+		HtmlContent:   buf.String(),
+		Subject:       subject,
+	}
+
+	log.Printf("waitlist service, sender: %s", s.sender)
+
+	if _, err = s.emailSender.SendEmail(ctx, &payload); err != nil {
 		log.Printf("waitlist: failed to send confirmation email to %s: %s", email, err)
 	}
 
 	return nil
+}
+
+func (s *Service) GetWaitlistCount(ctx context.Context) (int, error) {
+	return s.repo.GetWaitlistCount(ctx)
 }

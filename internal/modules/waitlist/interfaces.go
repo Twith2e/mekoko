@@ -1,7 +1,10 @@
 package waitlist
 
-import "context"
+import (
+	"context"
+	"mekoko/internal/domain"
+)
 
 type EmailSender interface {
-	SendEmail(ctx context.Context, recipient, subject, htmlBody string) error
+	SendEmail(ctx context.Context, payload *domain.Email) (string, error)
 }

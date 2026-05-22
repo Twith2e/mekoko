@@ -8,6 +8,7 @@ import (
 	"errors"
 	"html/template"
 	"log"
+	"mekoko/internal/domain"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/hasher"
 	"strings"
@@ -260,7 +261,28 @@ func (s *Service) ForgotPassword(ctx context.Context, payload ForgotPasswordRequ
 
 	htmlBody := buf.String()
 
-	if err := s.emailSender.SendEmail(ctx, email, "Password Reset", htmlBody); err != nil {
+	outgoingEmailPID := uuid.NewString()
+	subject := "Password Reset"
+
+	emailPayload := domain.Email{
+		Sender:        "aadebajo@mode3.tech",
+		SenderName:    "Mekoko",
+		Recipient:     email,
+		RecipientName: user.FirstName,
+		Subject:       "Password Reset",
+		HtmlContent:   htmlBody,
+	}
+
+	if _, err = s.repo.CreateOutgoingEmail(ctx, outgoingEmailPID, subject, "Brevo", user.ID, emailPayload); err != nil {
+		return err
+	}
+
+	id, err := s.emailSender.SendEmail(ctx, &emailPayload)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.UpdateOutgoingEmailOnResult(ctx, "successful", "", id, user.ID); err != nil {
 		return err
 	}
 

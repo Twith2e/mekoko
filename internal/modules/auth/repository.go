@@ -9,9 +9,12 @@ import (
 	"time"
 )
 
+const MaxRetry = 5
+
 type DBTX interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
 	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
 type Repository struct {
@@ -246,4 +249,91 @@ func (r *Repository) GetPasswordResetAttemptCount(ctx context.Context, userID in
 	}
 
 	return attemptCount, nil
+}
+
+func (r *Repository) CreateOutgoingEmail(ctx context.Context, PublicID, subject, provider string, recipient int64, emailStruct domain.Email) (int64, error) {
+	query := `
+		INSERT INTO outgoing_emails (public_id, subject, provider, recipient, email_struct)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`
+
+	var outgoingEmailID int64
+
+	err := r.db.QueryRowContext(ctx, query, PublicID, subject, provider, recipient, emailStruct).Scan(&outgoingEmailID)
+
+	if err != nil {
+		return 0, err
+	}
+	return outgoingEmailID, nil
+}
+
+func (r *Repository) UpdateOutgoingEmailOnResult(ctx context.Context, result, reasonForFailure, messageID string, ID int64) error {
+	var query string
+	if result == "failed" {
+		query = `
+			UPDATE outgoing_emails
+			SET status = $1, reason_for_failure = $2, updated_at = NOW()
+			WHERE id = $3
+		`
+
+		_, err := r.db.ExecContext(ctx, query, "failed", reasonForFailure, ID)
+
+		return err
+
+	} else {
+		query = `
+			UPDATE outgoing_emails
+			SET status = $1, message_id = $2, delivered_at = NOW(), updated_at = NOW()
+			WHERE id = $3
+		`
+
+		_, err := r.db.ExecContext(ctx, query, "successful", messageID, ID)
+
+		return err
+	}
+}
+
+func (r *Repository) FetchPendingOutgoingEmails(ctx context.Context) ([]domain.OutgoingEmail, error) {
+	query := `
+		SELECT id, public_id, subject, recipient, status, email_struct
+		FROM outgoing_emails
+		WHERE (status = 'pending' AND retry_count < $1) OR (status = 'failed' AND retry_count < $1)
+	`
+
+	outgoingEmails := make([]domain.OutgoingEmail, 0)
+
+	rows, err := r.db.QueryContext(ctx, query, MaxRetry)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var outgoingEmail domain.OutgoingEmail
+		if err := rows.Scan(&outgoingEmail.ID, &outgoingEmail.PublicID, &outgoingEmail.Subject, &outgoingEmail.Recipient, &outgoingEmail.Status, &outgoingEmail.EmailStruct); err != nil {
+			return nil, err
+		}
+
+		outgoingEmails = append(outgoingEmails, outgoingEmail)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return outgoingEmails, nil
+}
+
+func (r *Repository) UpdateOutgoingEmailOnRetry(ctx context.Context, ID int64) error {
+	query := `
+		UPDATE outgoing_emails
+		SET last_retry_at = NOW(), retry_count = outgoing_emails.retry_count + 1
+		WHERE id = $1
+	`
+
+	_, err := r.db.ExecContext(ctx, query, ID)
+
+	return err
 }

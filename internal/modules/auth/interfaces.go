@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"mekoko/internal/domain"
 	"time"
 )
 
@@ -11,5 +12,5 @@ type TokenGenerator interface {
 }
 
 type EmailSender interface {
-	SendEmail(ctx context.Context, recipient, subject string, htmlBody string) error
+	SendEmail(ctx context.Context, payload *domain.Email) (string, error)
 }

@@ -51,11 +51,12 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	isProd := cfg.IsProd
 
-	resend := email.NewResend(cfg.ResendApiKey)
+	// resend := email.NewResend(cfg.ResendApiKey)
+	brevo := email.NewBrevo(cfg.BrevoApiKey)
 
 	authRepository := auth.NewRepository(db)
 	authGuard := middleware.AuthGuard(generator, authRepository)
-	authService := auth.NewService(authRepository, db, generator, resend, cfg.MekokoClientBaseURL, cfg.AppName)
+	authService := auth.NewService(authRepository, db, generator, brevo, cfg.MekokoClientBaseURL, cfg.AppName)
 	authHandler := auth.NewHandler(authService, stringToBool(isProd))
 	auth.RegisterRoutes(apiV1, authGuard, authHandler)
 
@@ -75,7 +76,7 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 	order.RegisterRoutes(apiV1, authGuard, orderHandler)
 
 	waitlistRepository := waitlist.NewRepository(db)
-	waitlistService := waitlist.NewService(waitlistRepository, resend, cfg.AppName)
+	waitlistService := waitlist.NewService(waitlistRepository, brevo, cfg.AppName, cfg.EmailSender)
 	waitlistHandler := waitlist.NewHandler(waitlistService)
 	waitlist.AddRoute(apiV1, waitlistHandler)
 

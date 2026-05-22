@@ -41,3 +41,20 @@ func (h *Handler) JoinWaitlist(c *gin.Context) {
 		Message: "You have been added to the waitlist!!!",
 	})
 }
+
+func (h *Handler) GetWaitlistCount(c *gin.Context) {
+	count, err := h.service.GetWaitlistCount(c.Request.Context())
+	if err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[int]{
+		Status: "success",
+		Data:   &count,
+	})
+}
