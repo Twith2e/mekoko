@@ -1,6 +1,7 @@
 package waitlist
 
 import (
+	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -39,6 +40,24 @@ func (h *Handler) JoinWaitlist(c *gin.Context) {
 	c.JSON(http.StatusOK, response.APIResponse[any]{
 		Status:  "success",
 		Message: "You have been added to the waitlist!!!",
+	})
+}
+
+func (h *Handler) FetchWaitlistedEmails(c *gin.Context) {
+	entries, err := h.service.FetchWaitlistedEmails(c.Request.Context())
+	if err != nil {
+		log.Printf("waitlist: failed to fetch waitlisted emails: %s", err)
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[[]WaitlistEntry]{
+		Status: "success",
+		Data:   &entries,
 	})
 }
 

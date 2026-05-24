@@ -75,6 +75,10 @@ func (s *Service) JoinWaitlist(ctx context.Context, email string) error {
 	return nil
 }
 
+func (s *Service) FetchWaitlistedEmails(ctx context.Context) ([]WaitlistEntry, error) {
+	return s.repo.FetchWaitlistedEmails(ctx)
+}
+
 func (s *Service) GetWaitlistCount(ctx context.Context) (int, error) {
 	return s.repo.GetWaitlistCount(ctx)
 }

@@ -29,6 +29,26 @@ func (r *Repository) AddToWaitlist(ctx context.Context, email string) error {
 	return nil
 }
 
+func (r *Repository) FetchWaitlistedEmails(ctx context.Context) ([]WaitlistEntry, error) {
+	query := `SELECT email, created_at FROM waitlists`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []WaitlistEntry
+	for rows.Next() {
+		var entry WaitlistEntry
+		if err := rows.Scan(&entry.Email, &entry.Date); err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
 func (r *Repository) GetWaitlistCount(ctx context.Context) (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM waitlists`

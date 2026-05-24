@@ -8,5 +8,6 @@ func AddRoute(rg *gin.RouterGroup, handler *Handler) {
 	{
 		waitlist.POST("/join", handler.JoinWaitlist)
 		waitlist.GET("/count", handler.GetWaitlistCount)
+		waitlist.GET("/entries", handler.FetchWaitlistedEmails)
 	}
 }
