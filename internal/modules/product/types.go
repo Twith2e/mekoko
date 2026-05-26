@@ -1,11 +1,13 @@
 package product
 
+type FilterType string
+
 const (
-	FilterPriceASC  = "price_asc"
-	FilterPriceDESC = "price_desc"
-	OldestFirst     = "oldest_first"
-	NewestFirst     = "newest_first"
-	IdFilter        = "id"
+	FilterPriceASC    FilterType = "price_asc"
+	FilterPriceDESC   FilterType = "price_desc"
+	FilterOldestFirst FilterType = "oldest_first"
+	FilterNewestFirst FilterType = "newest_first"
+	FilterDefault     FilterType = "id"
 )
 
 type NewProduct struct {
@@ -23,4 +25,11 @@ type NewVariant struct {
 	StockQuantity int64
 	Size          string
 	ImageURL      string
+}
+
+type Filter struct {
+	Order    FilterType
+	Color    []string
+	MinPrice *int64
+	MaxPrice *int64
 }

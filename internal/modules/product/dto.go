@@ -33,7 +33,10 @@ type GetProductsResponse struct {
 }
 
 type GetProductsQuery struct {
-	Filter string `form:"filter" binding:"omitempty,oneof=price_asc price_desc oldest_first newest_first"`
-	Page   int    `form:"page" binding:"omitempty,min=1"`
-	Limit  int    `form:"limit" binding:"omitempty,min=1,max=100"`
+	Order    string   `form:"order" binding:"omitempty,oneof=price_asc price_desc oldest_first newest_first"`
+	Color    []string `form:"color" binding:"omitempty"`
+	MinPrice *int64   `form:"min_price" binding:"omitempty,gt=0"`
+	MaxPrice *int64   `form:"max_price" binding:"omitempty,gt=0"`
+	Page     int      `form:"page" binding:"omitempty,min=1"`
+	Limit    int      `form:"limit" binding:"omitempty,min=1,max=100"`
 }

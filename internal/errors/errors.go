@@ -18,4 +18,5 @@ var (
 	ErrPasswordResetUserNotFound = errors.New("If that email exists, you'll receuve a reset link")
 	ErrInvalidToken              = errors.New("Invalid or expired tokens")
 	ErrInvalidRequestQuery       = errors.New("Invalid request query")
+	ErrInvalidPriceRange         = errors.New("Max price must be greater than min price")
 )

@@ -66,7 +66,7 @@ func (s *Service) AddProducts(ctx context.Context, payload []AddProductsRequest)
 	return nil
 }
 
-func (s *Service) GetProducts(ctx context.Context, limit, offset int, filter string) ([]domain.Product, int64, error) {
+func (s *Service) GetProducts(ctx context.Context, limit, offset int, filter Filter) ([]domain.Product, int64, error) {
 	products, count, err := s.repo.GetProducts(ctx, limit, offset, filter)
 	if err != nil {
 		log.Printf("Error fetching products: %v", err)

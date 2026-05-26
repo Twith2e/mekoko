@@ -56,8 +56,9 @@ func (h *Handler) FetchWaitlistedEmails(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.APIResponse[[]WaitlistEntry]{
-		Status: "success",
-		Data:   &entries,
+		Status:  "success",
+		Message: "Waitlisted emails retrieved successfully",
+		Data:    &entries,
 	})
 }
 
@@ -73,7 +74,8 @@ func (h *Handler) GetWaitlistCount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.APIResponse[int]{
-		Status: "success",
-		Data:   &count,
+		Status:  "success",
+		Message: "Waitlist count retrieved successfully",
+		Data:    &count,
 	})
 }

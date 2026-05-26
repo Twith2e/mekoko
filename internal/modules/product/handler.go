@@ -68,7 +68,23 @@ func (h *Handler) GetProducts(c *gin.Context) {
 		return
 	}
 
-	products, count, err := h.service.GetProducts(c.Request.Context(), query.Limit, (query.Page-1)*query.Limit, query.Filter)
+	if query.MaxPrice != nil && query.MinPrice != nil && *query.MaxPrice < *query.MinPrice {
+		mapped := response.MapError(appErr.ErrInvalidPriceRange)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	filter := Filter{
+		Order:    FilterType(query.Order),
+		Color:    query.Color,
+		MinPrice: query.MinPrice,
+		MaxPrice: query.MaxPrice,
+	}
+
+	products, count, err := h.service.GetProducts(c.Request.Context(), query.Limit, (query.Page-1)*query.Limit, filter)
 	if err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{

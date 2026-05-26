@@ -55,20 +55,20 @@ func (r *Repository) AddProductVariant(ctx context.Context, newVariant NewVarian
 	return err
 }
 
-func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, filter string) ([]domain.Product, int64, error) {
+func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, filter Filter) ([]domain.Product, int64, error) {
 	var pOrderBy string
 	var productsOrderBy string
-	switch strings.TrimSpace(strings.ToLower(filter)) {
-	case FilterPriceASC:
+	switch strings.TrimSpace(strings.ToLower(string(filter.Order))) {
+	case strings.ToLower(string(FilterPriceASC)):
 		pOrderBy = "p.base_price ASC"
 		productsOrderBy = "products.base_price ASC"
-	case FilterPriceDESC:
+	case strings.ToLower(string(FilterPriceDESC)):
 		pOrderBy = "p.base_price DESC"
 		productsOrderBy = "products.base_price DESC"
-	case OldestFirst:
+	case strings.ToLower(string(FilterOldestFirst)):
 		pOrderBy = "p.created_at ASC"
 		productsOrderBy = "products.created_at ASC"
-	case NewestFirst:
+	case strings.ToLower(string(FilterNewestFirst)):
 		pOrderBy = "p.created_at DESC"
 		productsOrderBy = "products.created_at DESC"
 	default:
@@ -84,20 +84,53 @@ func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, fil
 		offset = 0
 	}
 
+	args := []any{limit, offset}
+	conditions := []string{}
+	filterConditions := []string{}
+
+	if filter.Color != nil {
+		args = append(args, filter.Color)
+		filterConditions = append(filterConditions, fmt.Sprintf("EXISTS (SELECT 1 FROM product_variants WHERE product_variants.product_id = products.id AND product_variants.color = ANY($%d))", len(args)-2))
+		conditions = append(conditions, fmt.Sprintf("EXISTS (SELECT 1 FROM product_variants WHERE product_variants.product_id = products.id AND product_variants.color = ANY($%d))", len(args)))
+	}
+
+	if filter.MaxPrice != nil {
+		args = append(args, *filter.MaxPrice)
+		filterConditions = append(filterConditions, fmt.Sprintf("base_price <= $%d", len(args)-2))
+		conditions = append(conditions, fmt.Sprintf("products.base_price <= $%d", len(args)))
+	}
+
+	if filter.MinPrice != nil {
+		args = append(args, *filter.MinPrice)
+		filterConditions = append(filterConditions, fmt.Sprintf("base_price >= $%d", len(args)-2))
+		conditions = append(conditions, fmt.Sprintf("products.base_price >= $%d", len(args)))
+	}
+
+	whereClause := ""
+	filterWhereClause := ""
+
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	if len(filterConditions) > 0 {
+		filterWhereClause = " WHERE " + strings.Join(filterConditions, " AND ")
+	}
+
 	query := fmt.Sprintf(`
 		SELECT p.id, p.public_id, p.name, p.discount_percentage, p.base_price, p.description, product_variants.id, product_variants.public_id, product_variants.product_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
-		FROM (SELECT * FROM products ORDER BY %s LIMIT $1 OFFSET $2) AS p
+		FROM (SELECT * FROM products %s ORDER BY %s LIMIT $1 OFFSET $2) AS p
 		JOIN product_variants ON product_variants.product_id = p.id
 		ORDER BY %s
-	`, productsOrderBy, pOrderBy)
+	`, whereClause, productsOrderBy, pOrderBy)
 
-	countQuery := `
-		SELECT COUNT(*) FROM products
-	`
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*) FROM products %s
+	`, filterWhereClause)
 
 	var count int64
 
-	rows, err := r.db.QueryContext(ctx, query, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -158,7 +191,7 @@ func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, fil
 		products = append(products, *p)
 	}
 
-	countRow := r.db.QueryRowContext(ctx, countQuery)
+	countRow := r.db.QueryRowContext(ctx, countQuery, args[2:]...)
 	if err := countRow.Scan(&count); err != nil {
 		return nil, 0, err
 	}
