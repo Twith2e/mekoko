@@ -237,7 +237,7 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 				Name:               productName,
 				Description:        productDescription,
 				PublicID:           productPublicID,
-				BasePrice:          productBasePrice,
+				BasePrice:          productBasePrice / 100,
 				DiscountPercentage: productDiscountPercentage,
 			}
 		}
