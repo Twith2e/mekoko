@@ -1,6 +1,7 @@
 package product
 
 import (
+	"mekoko/internal/domain"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -131,5 +132,23 @@ func (h *Handler) GetProducts(c *gin.Context) {
 		Page:    query.Page,
 		Limit:   query.Limit,
 		Total:   count,
+	})
+}
+
+func (h *Handler) GetProductByPublicID(c *gin.Context) {
+	publicID := c.Param("public_id")
+	product, err := h.service.GetProductByPublicID(c.Request.Context(), publicID)
+	if err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, response.APIResponse[*domain.Product]{
+		Status:  "success",
+		Message: "Product fetched successfully",
+		Data:    &product,
 	})
 }

@@ -74,3 +74,12 @@ func (s *Service) GetProducts(ctx context.Context, limit, offset int, filter Fil
 	}
 	return products, count, nil
 }
+
+func (s *Service) GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error) {
+	product, err := s.repo.GetProductByPublicID(ctx, publicID)
+	if err != nil {
+		log.Printf("Error fetching product by public ID: %v", err)
+		return nil, err
+	}
+	return product, nil
+}

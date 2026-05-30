@@ -8,5 +8,6 @@ func RegisterRoutes(rg *gin.RouterGroup, authGuard gin.HandlerFunc, handler *Han
 	{
 		// product.POST("/add", handler.AddProducts)
 		product.GET("", handler.GetProducts)
+		product.GET("/:public_id", handler.GetProductByPublicID)
 	}
 }
