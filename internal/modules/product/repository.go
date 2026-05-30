@@ -201,7 +201,7 @@ func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, fil
 
 func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error) {
 	query := `
-		SELECT p.public_id, p.name, p.discount_percentage, p.base_price, p.description, product_variants.id, product_variants.product_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
+		SELECT p.public_id, p.name, p.discount_percentage, p.base_price, p.description, product_variants.public_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
 		FROM products AS p
 		JOIN product_variants ON product_variants.product_id = p.id
 		WHERE p.public_id = $1`
@@ -222,14 +222,13 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			productDiscountPercentage int
 			productDescription        string
 			variantPublicID           string
-			variantProductID          int64
 			variantColor              string
 			variantSize               string
 			variantImageURL           string
 			variantStockQuantity      int64
 		)
 
-		if err := rows.Scan(&productPublicID, &productName, &productDiscountPercentage, &productBasePrice, &productDescription, &variantPublicID, &variantProductID, &variantColor, &variantSize, &variantImageURL, &variantStockQuantity); err != nil {
+		if err := rows.Scan(&productPublicID, &productName, &productDiscountPercentage, &productBasePrice, &productDescription, &variantPublicID, &variantColor, &variantSize, &variantImageURL, &variantStockQuantity); err != nil {
 			return nil, err
 		}
 
@@ -248,7 +247,6 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			Size:          variantSize,
 			StockQuantity: variantStockQuantity,
 			PublicID:      variantPublicID,
-			ProductID:     variantProductID,
 			ImageURL:      variantImageURL,
 		})
 	}
