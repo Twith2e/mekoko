@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type ProductVariant struct {
-	ID            int64
+	ID            int64 `json:"id,omitempty"`
 	PublicID      string
 	ProductID     int64
 	Color         string

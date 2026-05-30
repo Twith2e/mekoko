@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Product struct {
-	ID                 int64
+	ID                 int64 `json:"id,omitempty"`
 	PublicID           string
 	Name               string
 	DiscountPercentage int

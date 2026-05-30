@@ -201,7 +201,7 @@ func (r *Repository) GetProducts(ctx context.Context, limit int, offset int, fil
 
 func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) (*domain.Product, error) {
 	query := `
-		SELECT p.public_id, p.name, p.discount_percentage, p.base_price, p.description, product_variants.id, product_variants.public_id, product_variants.product_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
+		SELECT p.public_id, p.name, p.discount_percentage, p.base_price, p.description, product_variants.id, product_variants.product_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
 		FROM products AS p
 		JOIN product_variants ON product_variants.product_id = p.id
 		WHERE p.public_id = $1`
@@ -221,7 +221,6 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			productBasePrice          int64
 			productDiscountPercentage int
 			productDescription        string
-			variantID                 int64
 			variantPublicID           string
 			variantProductID          int64
 			variantColor              string
@@ -230,7 +229,7 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			variantStockQuantity      int64
 		)
 
-		if err := rows.Scan(&productPublicID, &productName, &productDiscountPercentage, &productBasePrice, &productDescription, &variantID, &variantPublicID, &variantProductID, &variantColor, &variantSize, &variantImageURL, &variantStockQuantity); err != nil {
+		if err := rows.Scan(&productPublicID, &productName, &productDiscountPercentage, &productBasePrice, &productDescription, &variantPublicID, &variantProductID, &variantColor, &variantSize, &variantImageURL, &variantStockQuantity); err != nil {
 			return nil, err
 		}
 
@@ -245,7 +244,6 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 		}
 
 		product.Variants = append(product.Variants, domain.ProductVariant{
-			ID:            variantID,
 			Color:         variantColor,
 			Size:          variantSize,
 			StockQuantity: variantStockQuantity,
