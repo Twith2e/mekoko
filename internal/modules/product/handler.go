@@ -1,7 +1,6 @@
 package product
 
 import (
-	"mekoko/internal/domain"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -146,9 +145,30 @@ func (h *Handler) GetProductByPublicID(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, response.APIResponse[*domain.Product]{
+
+	variantDTO := make([]VariantResponse, 0, len(product.Variants))
+	for _, v := range product.Variants {
+		variantDTO = append(variantDTO, VariantResponse{
+			ID:            v.PublicID,
+			Color:         v.Color,
+			Size:          v.Size,
+			ImageURL:      v.ImageURL,
+			StockQuantity: v.StockQuantity,
+		})
+	}
+
+	dto := GetProductsResponse{
+		ID:                 product.PublicID,
+		Name:               product.Name,
+		Description:        product.Description,
+		BasePrice:          product.BasePrice,
+		DiscountPercentage: product.DiscountPercentage,
+		Variants:           variantDTO,
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[GetProductsResponse]{
 		Status:  "success",
 		Message: "Product fetched successfully",
-		Data:    &product,
+		Data:    &dto,
 	})
 }
