@@ -93,6 +93,15 @@ func MapError(err error) ErrorMapping {
 			},
 		}
 
+	case appErr.ErrForbidden:
+		return ErrorMapping{
+			Status: http.StatusForbidden,
+			Error: APIError{
+				Code:    "FORBIDDEN",
+				Message: "You do not have permission to access this resource.",
+			},
+		}
+
 	case appErr.ErrInvalidSession:
 		return ErrorMapping{
 			Status: http.StatusUnauthorized,
@@ -153,6 +162,15 @@ func MapError(err error) ErrorMapping {
 			Error: APIError{
 				Code:    "INVALID_PRICE_RANGE",
 				Message: appErr.ErrInvalidPriceRange.Error(),
+			},
+		}
+
+	case appErr.ErrInvalidAmount:
+		return ErrorMapping{
+			Status: http.StatusBadRequest,
+			Error: APIError{
+				Code:    "INVALID_AMOUNT",
+				Message: appErr.ErrInvalidAmount.Error(),
 			},
 		}
 

@@ -7,7 +7,7 @@ import (
 )
 
 type TokenGenerator interface {
-	GenerateAccessToken(userID, sid string) (string, error)
+	GenerateAccessToken(userID, sid, role string) (string, error)
 	GenerateRefreshToken(userID, sid string) (string, string, time.Time, error)
 }
 

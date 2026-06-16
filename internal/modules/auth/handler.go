@@ -31,7 +31,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	uat, err := h.service.Register(c.Request.Context(), req)
+	uat, err := h.service.Register(c.Request.Context(), req, UserRole)
 	if err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{

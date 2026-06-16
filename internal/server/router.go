@@ -56,6 +56,7 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	authRepository := auth.NewRepository(db)
 	authGuard := middleware.AuthGuard(generator, authRepository)
+	adminGuard := middleware.AdminGuard()
 	authService := auth.NewService(authRepository, db, generator, brevo, cfg.MekokoClientBaseURL, cfg.AppName)
 	authHandler := auth.NewHandler(authService, stringToBool(isProd))
 	auth.RegisterRoutes(apiV1, authGuard, authHandler)
@@ -63,7 +64,8 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 	productRepository := product.NewRepository(db)
 	productService := product.NewService(productRepository, db)
 	productHandler := product.NewHandler(productService)
-	product.RegisterRoutes(apiV1, authGuard, productHandler)
+	adminProductHandler := product.NewAdminHandler(productService)
+	product.RegisterRoutes(apiV1, authGuard, adminGuard, productHandler, adminProductHandler)
 
 	cartRepository := cart.NewRepository(db)
 	cartService := cart.NewService(cartRepository, db)

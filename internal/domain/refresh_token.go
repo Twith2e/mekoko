@@ -8,6 +8,7 @@ type RefreshToken struct {
 	TokenHash string
 	JTI       string
 	SID       string
+	Role      string
 	ExpiresAt time.Time
 	RevokedAt *time.Time
 	CreatedAt time.Time

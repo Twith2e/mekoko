@@ -30,10 +30,17 @@ type Service struct {
 }
 
 func NewService(repo *Repository, db *sql.DB, tokenGenerator TokenGenerator, emailSender EmailSender, clientBaseURL, appName string) *Service {
-	return &Service{repo: repo, db: db, tokenGenerator: tokenGenerator, emailSender: emailSender, clientBaseURL: clientBaseURL, appName: appName}
+	return &Service{
+		repo:           repo,
+		db:             db,
+		tokenGenerator: tokenGenerator,
+		emailSender:    emailSender,
+		clientBaseURL:  clientBaseURL,
+		appName:        appName,
+	}
 }
 
-func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserAndTokens, error) {
+func (s *Service) Register(ctx context.Context, req RegistrationRequest, role string) (*UserAndTokens, error) {
 	email := strings.TrimSpace(req.Email)
 
 	_, err := s.repo.FindUserByEmail(ctx, email)
@@ -66,6 +73,7 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 		LastName:     strings.TrimSpace(req.LastName),
 		Email:        email,
 		PasswordHash: hashedPassword,
+		Role:         role,
 	}
 
 	refreshToken, jti, expiresAt, err := s.tokenGenerator.GenerateRefreshToken(userPublicID, sid)
@@ -73,7 +81,7 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 		return nil, err
 	}
 
-	accessToken, err := s.tokenGenerator.GenerateAccessToken(userPublicID, sid)
+	accessToken, err := s.tokenGenerator.GenerateAccessToken(userPublicID, sid, role)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +102,7 @@ func (s *Service) Register(ctx context.Context, req RegistrationRequest) (*UserA
 		return nil, err
 	}
 
-	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, expiresAt); err != nil {
+	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, role, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -136,12 +144,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*Tokens, error) 
 	}
 	hashedRefreshToken := hasher.HashToken(refreshToken)
 
-	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid)
+	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid, user.Role)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, expiresAt); err != nil {
+	if err := s.repo.StoreRefreshToken(ctx, user.ID, sid, hashedRefreshToken, jti, user.Role, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -376,7 +384,7 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (
 
 	sid := uuid.NewString()
 
-	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid)
+	accessToken, err := s.tokenGenerator.GenerateAccessToken(user.UUID, sid, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +411,7 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshToken string) (
 		return nil, err
 	}
 
-	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, newHashedRefreshedToken, jti, expiresAt); err != nil {
+	if err := txRepo.StoreRefreshToken(ctx, user.ID, sid, newHashedRefreshedToken, jti, user.Role, expiresAt); err != nil {
 		return nil, err
 	}
 

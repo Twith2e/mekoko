@@ -5,7 +5,11 @@ import (
 	"time"
 )
 
-const CookieName = "mekoko_refresh_token"
+const (
+	CookieName = "mekoko_refresh_token"
+	UserRole   = "user"
+	AdminRole  = "admin"
+)
 
 type CreateUserInput struct {
 	PublicID     string
@@ -13,6 +17,7 @@ type CreateUserInput struct {
 	LastName     string
 	Email        string
 	PasswordHash string
+	Role         string
 }
 
 type Tokens struct {

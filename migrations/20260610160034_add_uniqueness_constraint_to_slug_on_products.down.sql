@@ -1,0 +1,5 @@
+ALTER TABLE products
+DROP CONSTRAINT IF EXISTS products_slug_unique;
+
+ALTER TABLE products
+ALTER COLUMN slug DROP NOT NULL;

@@ -11,6 +11,7 @@ import (
 type AccessTokenClaims struct {
 	SID  string `json:"sid"`
 	Type string `json:"typ"`
+	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -26,16 +27,20 @@ type JWT struct {
 }
 
 func NewJWT(accessSecret, refreshSecret string) *JWT {
-	return &JWT{accessSecret: accessSecret, refreshSecret: refreshSecret}
+	return &JWT{
+		accessSecret:  accessSecret,
+		refreshSecret: refreshSecret,
+	}
 }
 
-func (j *JWT) GenerateAccessToken(userID, sid string) (string, error) {
+func (j *JWT) GenerateAccessToken(userID, sid, role string) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(time.Minute * 15)
 
 	claims := AccessTokenClaims{
 		SID:  sid,
-		Type: "access_token",
+		Type: AccessToken,
+		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -54,7 +59,7 @@ func (j *JWT) GenerateRefreshToken(userID, sid string) (string, string, time.Tim
 
 	claims := RefreshTokenClaims{
 		SID:  sid,
-		Type: "refresh_token",
+		Type: RefreshToken,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
 			ID:        jti,

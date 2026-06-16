@@ -1,0 +1,2 @@
+ALTER TABLE products IF EXISTS
+DROP COLUMN slug;

@@ -2,12 +2,17 @@ package product
 
 import "github.com/gin-gonic/gin"
 
-func RegisterRoutes(rg *gin.RouterGroup, authGuard gin.HandlerFunc, handler *Handler) {
+func RegisterRoutes(rg *gin.RouterGroup, authGuard, adminGuard gin.HandlerFunc, handler *Handler, adminHandler *AdminHandler) {
 	product := rg.Group("/product")
 
 	{
-		// product.POST("/add", handler.AddProducts)
 		product.GET("", handler.GetProducts)
 		product.GET("/:public_id", handler.GetProductByPublicID)
+	}
+
+	adminProduct := rg.Group("/admin/product", authGuard, adminGuard)
+
+	{
+		adminProduct.POST("/add", adminHandler.AddProducts)
 	}
 }

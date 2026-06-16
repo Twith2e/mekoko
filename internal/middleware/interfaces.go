@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"mekoko/internal/domain"
 	"mekoko/internal/providers/tokens"
 )
 
@@ -10,5 +11,5 @@ type Signer interface {
 }
 
 type SessionChecker interface {
-	IsSessionActive(ctx context.Context, sid string) bool
+	IsSessionActive(ctx context.Context, sid string) (*domain.RefreshToken, error)
 }

@@ -12,6 +12,7 @@ var (
 	ErrInvalidCredentials        = errors.New("Invalid credentials")
 	ErrUserExists                = errors.New("Email is taken")
 	ErrUnauthorized              = errors.New("Unauthorized")
+	ErrForbidden                 = errors.New("Forbidden")
 	ErrInvalidSession            = errors.New("Invalid or expired session")
 	ErrRefreshingAccessToken     = errors.New("Failed to refresh access token")
 	ErrTooManyRequests           = errors.New("Too many requests")
@@ -19,4 +20,5 @@ var (
 	ErrInvalidToken              = errors.New("Invalid or expired tokens")
 	ErrInvalidRequestQuery       = errors.New("Invalid request query")
 	ErrInvalidPriceRange         = errors.New("Max price must be greater than min price")
+	ErrInvalidAmount             = errors.New("Amount must be greater than zero")
 )

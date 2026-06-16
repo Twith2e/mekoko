@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
@@ -12,6 +14,7 @@ import (
 const (
 	PublicIDContextKey  = "public_id"
 	SessionIDContextKey = "session_id"
+	UserRoleContextKey  = "user_role"
 )
 
 func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
@@ -47,7 +50,16 @@ func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
 		log.Printf("pid from auth guard: %s", sub)
 		log.Printf("sid from auth guard: %s", sid)
 
-		if !sessionChecker.IsSessionActive(c.Request.Context(), sid) {
+		refreshToken, err := sessionChecker.IsSessionActive(c.Request.Context(), sid)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			mapped := response.MapError(err)
+			c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+				Status: "error",
+				Error:  &mapped.Error,
+			})
+			return
+		}
+		if refreshToken == nil || errors.Is(err, sql.ErrNoRows) {
 			mapped := response.MapError(appErr.ErrUnauthorized)
 			c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 				Status: "error",
@@ -58,6 +70,7 @@ func AuthGuard(signer Signer, sessionChecker SessionChecker) gin.HandlerFunc {
 
 		c.Set(PublicIDContextKey, sub)
 		c.Set(SessionIDContextKey, sid)
+		c.Set(UserRoleContextKey, refreshToken.Role)
 		c.Next()
 	}
 }

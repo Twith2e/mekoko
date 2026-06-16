@@ -31,9 +31,9 @@ func (r *Repository) WithTx(tx *sql.Tx) *Repository {
 
 func (r *Repository) CreateUser(ctx context.Context, input CreateUserInput) (*domain.User, error) {
 	query := `
-		INSERT INTO users (public_id, first_name, last_name, email, password_hash)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, public_id, first_name, last_name, email, created_at
+		INSERT INTO users (public_id, first_name, last_name, email, password_hash, role)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, public_id, first_name, last_name, email, role, created_at
 	`
 	var user domain.User
 	err := r.db.QueryRowContext(ctx, query,
@@ -42,7 +42,8 @@ func (r *Repository) CreateUser(ctx context.Context, input CreateUserInput) (*do
 		input.LastName,
 		input.Email,
 		input.PasswordHash,
-	).Scan(&user.ID, &user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.CreatedAt)
+		input.Role,
+	).Scan(&user.ID, &user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -57,12 +58,20 @@ func (r *Repository) CreateUser(ctx context.Context, input CreateUserInput) (*do
 
 func (r *Repository) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, public_id, email, password_hash, first_name
-		FROM users 
+		SELECT id, public_id, email, password_hash, first_name, role
+		FROM users
 		WHERE email = $1
 	`
 	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash, &user.FirstName)
+	err := r.db.QueryRowContext(ctx, query, email).
+		Scan(
+			&user.ID,
+			&user.UUID,
+			&user.Email,
+			&user.PasswordHash,
+			&user.FirstName,
+			&user.Role,
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Could not find user by email: %s\n", err)
@@ -92,13 +101,20 @@ func (r *Repository) FindUserByTokenHash(ctx context.Context, tokenHash string) 
 
 func (r *Repository) FindUserByID(ctx context.Context, id int64) (*domain.User, error) {
 	query := `
-		SELECT id, public_id, email, password_hash 
-		FROM users 
+		SELECT id, public_id, email, password_hash, role
+		FROM users
 		WHERE id = $1
 	`
 
 	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.UUID, &user.Email, &user.PasswordHash)
+	err := r.db.QueryRowContext(ctx, query, id).
+		Scan(
+			&user.ID,
+			&user.UUID,
+			&user.Email,
+			&user.PasswordHash,
+			&user.Role,
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Could not find user by email: %s\n", err)
@@ -113,8 +129,8 @@ func (r *Repository) FindUserByID(ctx context.Context, id int64) (*domain.User, 
 
 func (r *Repository) FindUserByPublicID(ctx context.Context, publicID string) (*domain.User, error) {
 	query := `
-		SELECT id, public_id, email, password_hash 
-		FROM users 
+		SELECT id, public_id, email, password_hash
+		FROM users
 		WHERE public_id = $1
 	`
 
@@ -132,12 +148,12 @@ func (r *Repository) FindUserByPublicID(ctx context.Context, publicID string) (*
 	return &user, nil
 }
 
-func (r *Repository) StoreRefreshToken(ctx context.Context, userID int64, sid, tokenHash, jti string, expiresAt time.Time) error {
+func (r *Repository) StoreRefreshToken(ctx context.Context, userID int64, sid, tokenHash, jti, role string, expiresAt time.Time) error {
 	query := `
-		INSERT INTO refresh_tokens (user_id, token_hash, sid, jti, expires_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO refresh_tokens (user_id, token_hash, sid, jti, role, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, sid, jti, expiresAt)
+	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, sid, jti, role, expiresAt)
 	return err
 }
 
@@ -152,21 +168,23 @@ func (r *Repository) UpdateUserPasswordHash(ctx context.Context, pwHash string, 
 	return err
 }
 
-func (r *Repository) IsSessionActive(ctx context.Context, sid string) bool {
+func (r *Repository) IsSessionActive(ctx context.Context, sid string) (*domain.RefreshToken, error) {
 	query := `
-		SELECT true 
+		SELECT role
 		FROM refresh_tokens
 		WHERE sid = $1 AND revoked_at IS NULL AND expires_at > NOW()
 	`
-	var exists bool
-	err := r.db.QueryRowContext(ctx, query, sid).Scan(&exists)
+	var refreshToken domain.RefreshToken
+	if err := r.db.QueryRowContext(ctx, query, sid).Scan(&refreshToken.Role); err != nil {
+		return nil, err
+	}
 
-	return err == nil
+	return &refreshToken, nil
 }
 
 func (r *Repository) FindRefreshTokenHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error) {
 	query := `
-		SELECT user_id, token_hash, sid, expires_at, revoked_at 
+		SELECT user_id, token_hash, sid, expires_at, revoked_at
 		FROM refresh_tokens
 		WHERE token_hash = $1 AND expires_at > NOW() AND revoked_at IS NULL
 	`
