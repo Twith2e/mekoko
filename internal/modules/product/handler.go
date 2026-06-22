@@ -1,7 +1,6 @@
 package product
 
 import (
-	"encoding/json"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -10,83 +9,11 @@ import (
 )
 
 type Handler struct {
-	Service      *Service
-	FileUploader FileUploader
+	Service *Service
 }
 
-func NewHandler(service *Service, fileUploader FileUploader) *Handler {
-	return &Handler{Service: service, FileUploader: fileUploader}
-}
-
-func (h *Handler) AddProducts(c *gin.Context) {
-	dataJSON := c.PostForm("data")
-	var payload []AddProductsRequest
-	if err := json.Unmarshal([]byte(dataJSON), &payload); err != nil {
-		mapped := response.MapError(appErr.ErrInvalidRequestBody)
-		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
-			Status: "error",
-			Error:  &mapped.Error,
-		})
-		return
-	}
-
-	form, err := c.MultipartForm()
-	if err != nil {
-		mapped := response.MapError(appErr.ErrInvalidRequestBody)
-		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
-			Status: "error",
-			Error:  &mapped.Error,
-		})
-		return
-	}
-	imageFiles := form.File["images"]
-
-	for pi := range payload {
-		for vi := range payload[pi].Variants {
-			idx := payload[pi].Variants[vi].ImageIndex
-			if idx >= 0 && idx < len(imageFiles) {
-				file, err := imageFiles[idx].Open()
-				if err != nil {
-					mapped := response.MapError(err)
-					c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
-						Status: "error",
-						Error:  &mapped.Error,
-					})
-					return
-				}
-				url, err := h.FileUploader.UploadFile(c.Request.Context(), file, imageFiles[idx])
-				if err != nil {
-					mapped := response.MapError(err)
-					c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
-						Status: "error",
-						Error:  &mapped.Error,
-					})
-					return
-				}
-				payload[pi].Variants[vi].ImageURL = url
-			}
-		}
-	}
-
-	if err := h.Service.AddProducts(c.Request.Context(), payload); err != nil {
-		mapped := response.MapError(err)
-		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
-			Status: "error",
-			Error:  &mapped.Error,
-		})
-		return
-	}
-
-	message := "Product successfully added"
-
-	if len(payload) > 1 {
-		message = "Products successfully added"
-	}
-
-	c.JSON(http.StatusOK, response.APIResponse[any]{
-		Status:  "success",
-		Message: message,
-	})
+func NewHandler(service *Service) *Handler {
+	return &Handler{Service: service}
 }
 
 func (h *Handler) GetProducts(c *gin.Context) {

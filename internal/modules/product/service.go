@@ -18,7 +18,7 @@ func NewService(repo *Repository, db *sql.DB) *Service {
 	return &Service{repo: repo, db: db}
 }
 
-func (s *Service) AddProducts(ctx context.Context, payload []AddProductsRequest) error {
+func (s *Service) AddProducts(ctx context.Context, payload AddProductsRequest) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -28,35 +28,33 @@ func (s *Service) AddProducts(ctx context.Context, payload []AddProductsRequest)
 
 	txRepo := s.repo.WithTx(tx)
 
-	for _, product := range payload {
-		productPublicID := uuid.NewString()
-		newProduct := NewProduct{
-			PublicID:           productPublicID,
-			Name:               product.Name,
-			Description:        product.Description,
-			BasePrice:          product.BasePrice * 100,
-			DiscountPercentage: product.DiscountPercentage,
-			Slug:               Slugify(product.Name),
+	productPublicID := uuid.NewString()
+	newProduct := NewProduct{
+		PublicID:           productPublicID,
+		Name:               payload.Name,
+		Description:        payload.Description,
+		BasePrice:          payload.BasePrice * 100,
+		DiscountPercentage: payload.DiscountPercentage,
+		Slug:               Slugify(payload.Name),
+	}
+	storedProduct, err := txRepo.AddProduct(ctx, newProduct)
+	if err != nil {
+		return err
+	}
+
+	for _, variant := range payload.Variants {
+		variantPublicID := uuid.NewString()
+		newVariant := NewVariant{
+			PublicID:      variantPublicID,
+			ProductID:     storedProduct.ID,
+			Color:         variant.Color,
+			StockQuantity: variant.StockQuantity,
+			Size:          variant.Size,
+			ImageURL:      variant.ImageURL,
 		}
-		storedProduct, err := txRepo.AddProduct(ctx, newProduct)
-		if err != nil {
+
+		if err := txRepo.AddProductVariant(ctx, newVariant); err != nil {
 			return err
-		}
-
-		for _, variant := range product.Variants {
-			variantPublicID := uuid.NewString()
-			newVariant := NewVariant{
-				PublicID:      variantPublicID,
-				ProductID:     storedProduct.ID,
-				Color:         variant.Color,
-				StockQuantity: variant.StockQuantity,
-				Size:          variant.Size,
-				ImageURL:      variant.ImageURL,
-			}
-
-			if err := txRepo.AddProductVariant(ctx, newVariant); err != nil {
-				return err
-			}
 		}
 	}
 

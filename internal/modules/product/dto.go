@@ -3,7 +3,6 @@ package product
 type Variant struct {
 	Color         string `json:"color" binding:"required"`
 	ImageURL      string `json:"image_url" binding:"required"`
-	ImageIndex    int    `json:"image_index" binding:"required"`
 	Size          string `json:"size"`
 	StockQuantity int64  `json:"stock_quantity" binding:"omitempty"`
 }

@@ -71,8 +71,8 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	productRepository := product.NewRepository(db)
 	productService := product.NewService(productRepository, db)
-	productHandler := product.NewHandler(productService, cloudinary)
-	adminProductHandler := product.NewAdminHandler(productService)
+	productHandler := product.NewHandler(productService)
+	adminProductHandler := product.NewAdminHandler(productService, cloudinary)
 	product.RegisterRoutes(apiV1, authGuard, adminGuard, productHandler, adminProductHandler)
 
 	cartRepository := cart.NewRepository(db)
