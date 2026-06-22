@@ -15,12 +15,11 @@ type Cloudinary struct {
 	APIKey           string
 	APISecret        string
 	CloudName        string
-	URL              string
 	HttpClient       *http.Client
 	CloudinaryClient *cloudinary.Cloudinary
 }
 
-func NewCloudinary(apiKey, apiSecret, cloudName, url string) (*Cloudinary, error) {
+func NewCloudinary(apiKey, apiSecret, cloudName string) (*Cloudinary, error) {
 	cld, err := cloudinary.NewFromParams(cloudName, apiKey, apiSecret)
 	if err != nil {
 		return nil, err
@@ -29,7 +28,6 @@ func NewCloudinary(apiKey, apiSecret, cloudName, url string) (*Cloudinary, error
 		APIKey:           apiKey,
 		APISecret:        apiSecret,
 		CloudName:        cloudName,
-		URL:              url,
 		HttpClient:       &http.Client{Timeout: 15 * time.Second},
 		CloudinaryClient: cld,
 	}, nil
