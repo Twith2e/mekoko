@@ -14,6 +14,7 @@ import (
 	"mekoko/internal/modules/waitlist"
 	"mekoko/internal/providers/email"
 	tokenGenerator "mekoko/internal/providers/tokens"
+	"mekoko/internal/providers/upload"
 	"net/http"
 	"strings"
 	"time"
@@ -29,9 +30,10 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 	}
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{cfg.AllowedOrigin},
-		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		AllowOrigins:     []string{cfg.AllowedOrigin},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Cookie"},
+		AllowCredentials: true,
 	}))
 	r.Use(middleware.RequestContextLogger())
 	r.Use(gin.Recovery())
@@ -53,17 +55,23 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	// resend := email.NewResend(cfg.ResendApiKey)
 	brevo := email.NewBrevo(cfg.BrevoApiKey)
+	cloudinary, err := upload.NewCloudinary(cfg.CloudinaryCloudName, cfg.CloudinaryApiKey, cfg.CloudinaryApiSecret)
+	if err != nil {
+		log.Printf("failed to create cloudinary: %v", err)
+		return nil, fmt.Errorf("failed to create cloudinary: %w", err)
+	}
 
 	authRepository := auth.NewRepository(db)
 	authGuard := middleware.AuthGuard(generator, authRepository)
 	adminGuard := middleware.AdminGuard()
 	authService := auth.NewService(authRepository, db, generator, brevo, cfg.MekokoClientBaseURL, cfg.AppName)
 	authHandler := auth.NewHandler(authService, stringToBool(isProd))
-	auth.RegisterRoutes(apiV1, authGuard, authHandler)
+	adminHandler := auth.NewHandler(authService, stringToBool(isProd))
+	auth.RegisterRoutes(apiV1, authGuard, adminGuard, authHandler, adminHandler)
 
 	productRepository := product.NewRepository(db)
 	productService := product.NewService(productRepository, db)
-	productHandler := product.NewHandler(productService)
+	productHandler := product.NewHandler(productService, cloudinary)
 	adminProductHandler := product.NewAdminHandler(productService)
 	product.RegisterRoutes(apiV1, authGuard, adminGuard, productHandler, adminProductHandler)
 

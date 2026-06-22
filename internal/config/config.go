@@ -17,6 +17,9 @@ type Config struct {
 	AppName             string
 	AllowedOrigin       string
 	EmailSender         string
+	CloudinaryCloudName string
+	CloudinaryApiKey    string
+	CloudinaryApiSecret string
 }
 
 func Load() Config {
@@ -30,8 +33,11 @@ func Load() Config {
 		BrevoApiKey:         getEnv("BREVO_API_KEY", ""),
 		MekokoClientBaseURL: getEnv("MEKOKO_CLIENT_BASE_URL", ""),
 		AppName:             getEnv("APP_NAME", "Mekoko"),
-		AllowedOrigin:       getEnv("ALLOWED_ORIGIN", "localhost:3000"),
+		AllowedOrigin:       getEnv("ALLOWED_ORIGIN", "http://localhost:3000"),
 		EmailSender:         getEnv("EMAIL_SENDER", ""),
+		CloudinaryCloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryApiKey:    getEnv("CLOUDINARY_API_KEY", ""),
+		CloudinaryApiSecret: getEnv("CLOUDINARY_API_SECRET", ""),
 	}
 }
 

@@ -16,6 +16,7 @@ type NewProduct struct {
 	Description        string
 	DiscountPercentage int
 	BasePrice          int64
+	Slug               string
 }
 
 type NewVariant struct {

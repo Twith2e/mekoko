@@ -9,6 +9,7 @@ type Product struct {
 	DiscountPercentage int
 	Description        string
 	BasePrice          int64
+	Slug               string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	Variants           []ProductVariant

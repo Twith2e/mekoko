@@ -10,9 +10,10 @@ func RegisterRoutes(rg *gin.RouterGroup, authGuard, adminGuard gin.HandlerFunc, 
 		product.GET("/:public_id", handler.GetProductByPublicID)
 	}
 
-	adminProduct := rg.Group("/admin/product", authGuard, adminGuard)
+	adminProduct := rg.Group("/admin/products", authGuard, adminGuard)
 
 	{
 		adminProduct.POST("/add", adminHandler.AddProducts)
+		adminProduct.GET("", handler.GetProducts)
 	}
 }

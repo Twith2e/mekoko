@@ -57,4 +57,54 @@ func (a *AdminHandler) AddProducts(c *gin.Context) {
 	})
 }
 
-func (a *AdminHandler) FetchAllProducts(c *gin.Context) {}
+func (h *AdminHandler) FetchAllProducts(c *gin.Context) {
+	var query GetProducts
+	if err := c.ShouldBindQuery(&query); err != nil {
+		mapped := response.MapError(appErr.ErrInvalidRequestQuery)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	products, count, err := h.Service.GetProducts(c.Request.Context(), query.Limit, (query.Page-1)*query.Limit)
+	if err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	dto := make([]GetProductsResponse, 0, len(products))
+	for _, p := range products {
+		product := GetProductsResponse{
+			ID:                 p.PublicID,
+			Name:               p.Name,
+			Description:        p.Description,
+			BasePrice:          p.BasePrice,
+			DiscountPercentage: p.DiscountPercentage,
+			Variants:           []VariantResponse{},
+		}
+		for _, v := range p.Variants {
+			product.Variants = append(product.Variants, VariantResponse{
+				ID:            v.PublicID,
+				Color:         v.Color,
+				Size:          v.Size,
+				ImageURL:      v.ImageURL,
+				StockQuantity: v.StockQuantity,
+			})
+		}
+		dto = append(dto, product)
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[[]GetProductsResponse]{
+		Status: "success",
+		Data:   &dto,
+		Page:   query.Page,
+		Limit:  query.Limit,
+		Total:  count,
+	})
+}

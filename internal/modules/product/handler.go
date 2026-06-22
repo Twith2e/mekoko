@@ -1,6 +1,7 @@
 package product
 
 import (
+	"encoding/json"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -9,16 +10,18 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	Service      *Service
+	FileUploader FileUploader
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, fileUploader FileUploader) *Handler {
+	return &Handler{Service: service, FileUploader: fileUploader}
 }
 
 func (h *Handler) AddProducts(c *gin.Context) {
+	dataJSON := c.PostForm("data")
 	var payload []AddProductsRequest
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err := json.Unmarshal([]byte(dataJSON), &payload); err != nil {
 		mapped := response.MapError(appErr.ErrInvalidRequestBody)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
@@ -27,7 +30,8 @@ func (h *Handler) AddProducts(c *gin.Context) {
 		return
 	}
 
-	if len(payload) <= 0 {
+	form, err := c.MultipartForm()
+	if err != nil {
 		mapped := response.MapError(appErr.ErrInvalidRequestBody)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
@@ -35,8 +39,36 @@ func (h *Handler) AddProducts(c *gin.Context) {
 		})
 		return
 	}
+	imageFiles := form.File["images"]
 
-	if err := h.service.AddProducts(c.Request.Context(), payload); err != nil {
+	for pi := range payload {
+		for vi := range payload[pi].Variants {
+			idx := payload[pi].Variants[vi].ImageIndex
+			if idx >= 0 && idx < len(imageFiles) {
+				file, err := imageFiles[idx].Open()
+				if err != nil {
+					mapped := response.MapError(err)
+					c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+						Status: "error",
+						Error:  &mapped.Error,
+					})
+					return
+				}
+				url, err := h.FileUploader.UploadFile(c.Request.Context(), file, imageFiles[idx])
+				if err != nil {
+					mapped := response.MapError(err)
+					c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+						Status: "error",
+						Error:  &mapped.Error,
+					})
+					return
+				}
+				payload[pi].Variants[vi].ImageURL = url
+			}
+		}
+	}
+
+	if err := h.Service.AddProducts(c.Request.Context(), payload); err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
@@ -58,7 +90,7 @@ func (h *Handler) AddProducts(c *gin.Context) {
 }
 
 func (h *Handler) GetProducts(c *gin.Context) {
-	var query GetProductsQuery
+	var query GetProductsWithFilterQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		mapped := response.MapError(appErr.ErrInvalidRequestQuery)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
@@ -84,7 +116,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 		MaxPrice: query.MaxPrice,
 	}
 
-	products, count, err := h.service.GetProducts(c.Request.Context(), query.Limit, (query.Page-1)*query.Limit, filter)
+	products, count, err := h.Service.GetProductsWithFilter(c.Request.Context(), query.Limit, (query.Page-1)*query.Limit, filter)
 	if err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
@@ -102,6 +134,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 			Description:        p.Description,
 			BasePrice:          p.BasePrice,
 			DiscountPercentage: p.DiscountPercentage,
+			Slug:               p.Slug,
 			Variants:           []VariantResponse{},
 		}
 		for _, v := range p.Variants {
@@ -136,7 +169,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 
 func (h *Handler) GetProductByPublicID(c *gin.Context) {
 	publicID := c.Param("public_id")
-	product, err := h.service.GetProductByPublicID(c.Request.Context(), publicID)
+	product, err := h.Service.GetProductByPublicID(c.Request.Context(), publicID)
 	if err != nil {
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{

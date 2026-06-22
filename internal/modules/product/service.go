@@ -36,6 +36,7 @@ func (s *Service) AddProducts(ctx context.Context, payload []AddProductsRequest)
 			Description:        product.Description,
 			BasePrice:          product.BasePrice * 100,
 			DiscountPercentage: product.DiscountPercentage,
+			Slug:               Slugify(product.Name),
 		}
 		storedProduct, err := txRepo.AddProduct(ctx, newProduct)
 		if err != nil {
@@ -66,8 +67,17 @@ func (s *Service) AddProducts(ctx context.Context, payload []AddProductsRequest)
 	return nil
 }
 
-func (s *Service) GetProducts(ctx context.Context, limit, offset int, filter Filter) ([]domain.Product, int64, error) {
-	products, count, err := s.repo.GetProducts(ctx, limit, offset, filter)
+func (s *Service) GetProductsWithFilter(ctx context.Context, limit, offset int, filter Filter) (products []domain.Product, count int64, err error) {
+	products, count, err = s.repo.GetProductsWithFilter(ctx, limit, offset, filter)
+	if err != nil {
+		log.Printf("Error fetching products: %v", err)
+		return nil, 0, err
+	}
+	return products, count, nil
+}
+
+func (s *Service) GetProducts(ctx context.Context, limit, offset int) (products []domain.Product, count int64, err error) {
+	products, count, err = s.repo.GetProducts(ctx, limit, offset)
 	if err != nil {
 		log.Printf("Error fetching products: %v", err)
 		return nil, 0, err

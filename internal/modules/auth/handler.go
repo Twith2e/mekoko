@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/middleware"
 	"mekoko/internal/response"
@@ -180,6 +181,7 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 func (h *Handler) RefreshAccessToken(c *gin.Context) {
 	cookie, err := (c.Request.Cookie(CookieName))
 	if err != nil {
+		log.Printf("refresh handler: %v", err)
 		mapped := response.MapError(appErr.ErrInvalidSession)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
@@ -190,6 +192,7 @@ func (h *Handler) RefreshAccessToken(c *gin.Context) {
 
 	rToken := strings.TrimSpace(cookie.Value)
 	if rToken == "" {
+		log.Printf("refresh handler: empty refresh token")
 		mapped := response.MapError(appErr.ErrInvalidSession)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
@@ -200,6 +203,7 @@ func (h *Handler) RefreshAccessToken(c *gin.Context) {
 
 	tokens, err := h.service.RefreshAccessToken(c.Request.Context(), rToken)
 	if err != nil {
+		log.Printf("refresh handler: %v", err)
 		mapped := response.MapError(err)
 		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
 			Status: "error",
