@@ -55,7 +55,7 @@ func NewRouter(cfg config.Config) (*gin.Engine, error) {
 
 	// resend := email.NewResend(cfg.ResendApiKey)
 	brevo := email.NewBrevo(cfg.BrevoApiKey)
-	cloudinary, err := upload.NewCloudinary(cfg.CloudinaryCloudName, cfg.CloudinaryApiKey, cfg.CloudinaryApiSecret)
+	cloudinary, err := upload.NewCloudinary(cfg.CloudinaryApiKey, cfg.CloudinaryApiSecret, cfg.CloudinaryCloudName)
 	if err != nil {
 		log.Printf("failed to create cloudinary: %v", err)
 		return nil, fmt.Errorf("failed to create cloudinary: %w", err)

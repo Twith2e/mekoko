@@ -2,6 +2,7 @@ package product
 
 import (
 	"encoding/json"
+	"log"
 	appErr "mekoko/internal/errors"
 	"mekoko/internal/response"
 	"net/http"
@@ -49,7 +50,7 @@ func (a *AdminHandler) AddProducts(c *gin.Context) {
 		return
 	}
 
-	for i, variant := range payload.Variants {
+	for i := range payload.Variants {
 		if i < len(imageFiles) {
 			file, _ := imageFiles[i].Open()
 			url, err := a.FileUploader.UploadFile(c.Request.Context(), file, imageFiles[i])
@@ -61,7 +62,8 @@ func (a *AdminHandler) AddProducts(c *gin.Context) {
 				})
 				return
 			}
-			variant.ImageURL = url
+			log.Printf("uploaded image %d: %s\n", i, url)
+			payload.Variants[i].ImageURL = url
 		}
 	}
 

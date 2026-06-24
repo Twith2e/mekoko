@@ -59,7 +59,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 			ID:                 p.PublicID,
 			Name:               p.Name,
 			Description:        p.Description,
-			BasePrice:          p.BasePrice,
+			BasePrice:          p.BasePrice / 100,
 			DiscountPercentage: p.DiscountPercentage,
 			Slug:               p.Slug,
 			Variants:           []VariantResponse{},
