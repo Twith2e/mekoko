@@ -123,6 +123,47 @@ func (h *Handler) GetProductByPublicID(c *gin.Context) {
 		Description:        product.Description,
 		BasePrice:          product.BasePrice,
 		DiscountPercentage: product.DiscountPercentage,
+		Slug:               product.Slug,
+		Variants:           variantDTO,
+	}
+
+	c.JSON(http.StatusOK, response.APIResponse[GetProductsResponse]{
+		Status:  "success",
+		Message: "Product fetched successfully",
+		Data:    &dto,
+	})
+}
+
+func (h *Handler) GetProductBySlug(c *gin.Context) {
+	slug := c.Param("slug")
+	product, err := h.Service.GetProductBySlug(c.Request.Context(), slug)
+	if err != nil {
+		mapped := response.MapError(err)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+
+	variantDTO := make([]VariantResponse, 0, len(product.Variants))
+	for _, v := range product.Variants {
+		variantDTO = append(variantDTO, VariantResponse{
+			ID:            v.PublicID,
+			Color:         v.Color,
+			Size:          v.Size,
+			ImageURL:      v.ImageURL,
+			StockQuantity: v.StockQuantity,
+		})
+	}
+
+	dto := GetProductsResponse{
+		ID:                 product.PublicID,
+		Name:               product.Name,
+		Description:        product.Description,
+		BasePrice:          product.BasePrice,
+		DiscountPercentage: product.DiscountPercentage,
+		Slug:               product.Slug,
 		Variants:           variantDTO,
 	}
 

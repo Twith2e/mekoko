@@ -325,6 +325,80 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			productBasePrice          int64
 			productDiscountPercentage int
 			productDescription        string
+			productSlug,
+			variantPublicID string
+			variantColor         string
+			variantSize          string
+			variantImageURL      string
+			variantStockQuantity int64
+		)
+
+		if err := rows.Scan(
+			&productPublicID,
+			&productName,
+			&productDiscountPercentage,
+			&productBasePrice,
+			&productDescription,
+			&productSlug,
+			&variantPublicID,
+			&variantColor,
+			&variantSize,
+			&variantImageURL,
+			&variantStockQuantity,
+		); err != nil {
+			return nil, err
+		}
+
+		if product == nil {
+			product = &domain.Product{
+				Name:               productName,
+				Description:        productDescription,
+				PublicID:           productPublicID,
+				BasePrice:          productBasePrice / 100,
+				DiscountPercentage: productDiscountPercentage,
+				Slug:               productSlug,
+			}
+		}
+
+		product.Variants = append(product.Variants, domain.ProductVariant{
+			Color:         variantColor,
+			Size:          variantSize,
+			StockQuantity: variantStockQuantity,
+			PublicID:      variantPublicID,
+			ImageURL:      variantImageURL,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return product, nil
+}
+
+func (r *Repository) GetProductBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+	query := `
+		SELECT p.public_id, p.name, p.discount_percentage, p.base_price, p.description, p.slug, product_variants.public_id, product_variants.color, product_variants.size, product_variants.image_url, product_variants.stock_quantity
+		FROM products AS p
+		JOIN product_variants ON product_variants.product_id = p.id
+		WHERE p.slug = $1`
+
+	rows, err := r.db.QueryContext(ctx, query, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var product *domain.Product
+	for rows.Next() {
+		var (
+			productPublicID           string
+			productName               string
+			productBasePrice          int64
+			productDiscountPercentage int
+			productSlug               string
+			productDescription        string
 			variantPublicID           string
 			variantColor              string
 			variantSize               string
@@ -337,6 +411,7 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 			&productName,
 			&productDiscountPercentage,
 			&productBasePrice,
+			&productSlug,
 			&productDescription,
 			&variantPublicID,
 			&variantColor,
@@ -354,6 +429,7 @@ func (r *Repository) GetProductByPublicID(ctx context.Context, publicID string) 
 				PublicID:           productPublicID,
 				BasePrice:          productBasePrice / 100,
 				DiscountPercentage: productDiscountPercentage,
+				Slug:               productSlug,
 			}
 		}
 

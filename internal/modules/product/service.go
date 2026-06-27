@@ -91,3 +91,16 @@ func (s *Service) GetProductByPublicID(ctx context.Context, publicID string) (*d
 	}
 	return product, nil
 }
+
+func (s *Service) GetProductBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+	product, err := s.repo.GetProductBySlug(ctx, slug)
+	if err != nil {
+		log.Printf("error fetching product details by slug: %s\n", err)
+		return nil, err
+	}
+	return product, nil
+}
+
+func (s *Service) UpdateProduct(ctx context.Context, publicID string, payload domain.Product) error {
+	return nil
+}

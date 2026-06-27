@@ -133,3 +133,19 @@ func (h *AdminHandler) FetchAllProducts(c *gin.Context) {
 		Total:  count,
 	})
 }
+
+func (h *AdminHandler) UpdateProduct(c *gin.Context) {
+	publicID := c.Param("public_id")
+	if publicID == "" {
+		mapped := response.MapError(appErr.ErrInvalidRequestQuery)
+		c.AbortWithStatusJSON(mapped.Status, response.APIResponse[any]{
+			Status: "error",
+			Error:  &mapped.Error,
+		})
+		return
+	}
+}
+
+func (h *AdminHandler) DeleteProduct(c *gin.Context) {
+
+}
