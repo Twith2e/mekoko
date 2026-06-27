@@ -395,10 +395,10 @@ func (r *Repository) GetProductBySlug(ctx context.Context, slug string) (*domain
 		var (
 			productPublicID           string
 			productName               string
-			productBasePrice          int64
 			productDiscountPercentage int
-			productSlug               string
+			productBasePrice          int64
 			productDescription        string
+			productSlug               string
 			variantPublicID           string
 			variantColor              string
 			variantSize               string
@@ -411,8 +411,8 @@ func (r *Repository) GetProductBySlug(ctx context.Context, slug string) (*domain
 			&productName,
 			&productDiscountPercentage,
 			&productBasePrice,
-			&productSlug,
 			&productDescription,
+			&productSlug,
 			&variantPublicID,
 			&variantColor,
 			&variantSize,
